@@ -55,7 +55,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <div class="row between">
  <div>
   <h1>ERR · 통합 철도 시뮬레이터</h1>
-  <p>기기 시각 연동 실시간 운행 (23:00 막차 기준, 20분 간격)</p>
+  <p>실제 기기 시각 연동 (23:00 막차 기준, 20분 간격)</p>
  </div>
  <div>
   <label for="lineSelect" style="display:inline;margin-right:8px;">노선 선택:</label>
@@ -156,19 +156,18 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 const $=id=>document.getElementById(id);
 const DAY=86400;
 
-// 노선별 데이터 정의 (23:00 출발 설정)
 const lineData={
  gyeongbu:{
   name:"경부선",
-  startDep:23*3600, // 23:00 출발
+  startDep:23*3600, // 23:00 출발 (막차/첫차 기준)
   stations:[
    {name:"서울",km:0,stop:0},
    {name:"광명",km:17,stop:180},
    {name:"천안아산",km:96.5,stop:180},
    {name:"오송",km:131.5,stop:180},
-   {name:"대전",km:166.3,stop:300}, // 5분 정차
+   {name:"대전",km:166.3,stop:300},
    {name:"김천(구미)",km:227.3,stop:180},
-   {name:"동대구",km:293.1,stop:300}, // 5분 정차
+   {name:"동대구",km:293.1,stop:300},
    {name:"경주",km:346.8,stop:180},
    {name:"태화강",km:380,stop:180},
    {name:"부산센텀",km:417.4,stop:0}
@@ -208,7 +207,7 @@ const lineData={
    {name:"임곡",km:174.7,stop:0},
    {name:"하남",km:181.2,stop:0},
    {name:"북송정",km:184.0,stop:0},
-   {name:"광주송정",km:185.7,stop:300}, // 광주송정 5분 정차[span_5](start_span)[span_5](end_span)
+   {name:"광주송정",km:185.7,stop:300}, // 5분 정차[span_5](start_span)[span_5](end_span)
    {name:"송정리",km:185.7,stop:0},
    {name:"노안",km:195.0,stop:0},
    {name:"나주",km:201.5,stop:0},
@@ -260,9 +259,10 @@ function stopWarningSound() {
  if(warningSoundInterval){ clearInterval(warningSoundInterval); warningSoundInterval=null; }
 }
 
+// 실제 기기 시각 연동 함수
 function deviceSeconds(){
  const d=new Date();
- return d.getHours()*3600+d.getMinutes()*60+d.getSeconds()+d.getMilliseconds()/1000;
+ return d.getHours()*3600 + d.getMinutes()*60 + d.getSeconds() + d.getMilliseconds()/1000;
 }
 function deviceTimeText(){
  const d=new Date();
@@ -281,7 +281,7 @@ function log(msg){
  while($("log").children.length>100)$("log").lastChild.remove();
 }
 
-// 기기 시각표 계산 함수 (기기 시간 기준으로 각 역의 도/출발 시각 산출)
+// 기기 시각 기준 시간표 산출
 function getTrainSchedule(depTime){
  let schedule=[];
  let curTime=depTime;
@@ -299,12 +299,11 @@ function getTrainSchedule(depTime){
  return schedule;
 }
 
-// 기기 시각에 맞춰 타 열차의 위치를 실시간 연동
+// 실제 기기 시각(deviceSeconds)을 바탕으로 다른 KTX 열차 위치 연동
 function getTrainState(t, nowSec){
  let elapsed=(nowSec-t.departure+DAY)%DAY;
  if(elapsed<0 || elapsed>25000) return {active:false, km:-1, speed:0};
  
- let sched = getTrainSchedule(t.departure);
  let currentT=0;
  for(let i=0; i<stations.length-1; i++){
   let startKm=stations[i].km;
@@ -553,7 +552,7 @@ updateTimetable();
 updateOtherTable();
 updateTrack();
 render();
-log("기기 시각 연동 통합 시뮬레이터 시작 (23시 막차 기준)");
+log("기기 실시간 시각 연동 시뮬레이터 시작");
 requestAnimationFrame(tick);
 </script>
 </body>
