@@ -55,7 +55,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <div class="row between">
  <div>
   <h1>ERR · 통합 철도 시뮬레이터</h1>
-  <p>경부선 및 호남선 연동 운행 시뮬레이터 (20분 간격, 첫차 05:00/05:10)</p>
+  <p>경부선 및 호남선 연동 운행 시뮬레이터 (20분 간격)</p>
  </div>
  <div>
   <label for="lineSelect" style="display:inline;margin-right:8px;">노선 선택:</label>
@@ -156,7 +156,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 const $=id=>document.getElementById(id);
 const DAY=86400;
 
-// 노선별 데이터 정의
+// 노선별 데이터 정의 (호남선 영업거리표 및 정차 규정 반영)[span_1](start_span)[span_1](end_span)
 const lineData={
  gyeongbu:{
   name:"경부선",
@@ -182,24 +182,24 @@ const lineData={
    {name:"서대전",km:5.7,stop:0},
    {name:"가수원",km:11.8,stop:0},
    {name:"흑석리",km:17.3,stop:0},
-   {name:"계룡",km:25.4,stop:180},     // 3분 정차
+   {name:"계룡",km:25.4,stop:180},     // 3분 정차[span_2](start_span)[span_2](end_span)
    {name:"개태사",km:34.7,stop:0},
    {name:"연산",km:39.6,stop:0},
    {name:"부황",km:44.5,stop:0},
-   {name:"논산",km:50.8,stop:180},     // 3분 정차
+   {name:"논산",km:50.8,stop:180},     // 3분 정차[span_3](start_span)[span_3](end_span)
    {name:"채운",km:57.5,stop:0},
    {name:"강경",km:60.7,stop:0},
    {name:"용동",km:66.7,stop:0},
    {name:"함열",km:71.8,stop:0},
    {name:"황등",km:81.2,stop:0},
-   {name:"익산",km:87.9,stop:180},     // 3분 정차
+   {name:"익산",km:87.9,stop:180},     // 3분 정차[span_4](start_span)[span_4](end_span)
    {name:"부용",km:95.3,stop:0},
    {name:"용룡",km:98.5,stop:0},
-   {name:"김제",km:105.6,stop:180},    // 3분 정차
+   {name:"김제",km:105.6,stop:180},    // 3분 정차[span_5](start_span)[span_5](end_span)
    {name:"감곡",km:112.4,stop:0},
    {name:"신태인",km:117.9,stop:0},
    {name:"초강",km:123.5,stop:0},
-   {name:"정읍",km:131.4,stop:180},    // 3분 정차
+   {name:"정읍",km:131.4,stop:180},    // 3분 정차[span_6](start_span)[span_6](end_span)
    {name:"천원",km:137.4,stop:0},
    {name:"노령",km:141.6,stop:0},
    {name:"백양사",km:148.6,stop:0},
@@ -208,17 +208,17 @@ const lineData={
    {name:"임곡",km:174.7,stop:0},
    {name:"하남",km:181.2,stop:0},
    {name:"북송정",km:184.0,stop:0},
-   {name:"광주송정",km:185.7,stop:300}, // 5분 정차[span_0](start_span)[span_0](end_span)
+   {name:"광주송정",km:185.7,stop:300}, // 광주송정 5분 정차[span_7](start_span)[span_7](end_span)
    {name:"송정리",km:185.7,stop:0},
    {name:"노안",km:195.0,stop:0},
    {name:"나주",km:201.5,stop:0},
    {name:"다시",km:208.9,stop:0},
    {name:"고막원",km:212.1,stop:0},
-   {name:"함평",km:218.9,stop:180},    // 3분 정차
+   {name:"함평",km:218.9,stop:180},    // 3분 정차[span_8](start_span)[span_8](end_span)
    {name:"무안",km:226.5,stop:0},
    {name:"몽탄",km:230.3,stop:0},
    {name:"일로",km:239.9,stop:0},
-   {name:"임성리",km:245.2,stop:180},   // 3분 정차
+   {name:"임성리",km:245.2,stop:180},   // 3분 정차[span_9](start_span)[span_9](end_span)
    {name:"목포",km:252.5,stop:0}
   ]
  }
@@ -302,8 +302,8 @@ function switchLine(lineKey){
  stations=lineData[lineKey].stations;
  LEN=stations[stations.length-1].km;
  distance=0; speed=0; power=0; notchLabel="N"; arrived=false;
- $("trackStart"].textContent=stations[0].name+" 0.0 km";
- $("trackEnd"].textContent=stations[stations.length-1].name+" "+LEN+" km";
+ $("trackStart").textContent=stations[0].name+" 0.0 km";
+ $("trackEnd").textContent=stations[stations.length-1].name+" "+LEN+" km";
  initTrains();
  log(lineData[lineKey].name+" 노선으로 변경되었습니다.");
  render();
@@ -541,8 +541,8 @@ document.addEventListener("keydown",e=>{
 });
 document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 
-$("trackStart"].textContent=stations[0].name+" 0.0 km";
-$("trackEnd"].textContent=stations[stations.length-1].name+" "+LEN+" km";
+$("trackStart").textContent=stations[0].name+" 0.0 km";
+$("trackEnd").textContent=stations[stations.length-1].name+" "+LEN+" km";
 initTrains();
 syncClock();
 updateOtherTrains();
