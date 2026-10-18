@@ -61,7 +61,10 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <label for="routeSelect" style="margin:0;font-weight:bold;">운행 노선:</label>
 <select id="routeSelect">
 <option value="gyeongbu">경부선 (서울 ~ 부산센텀)</option>
-<option value="honam">호남선 (용산 ~ 목포)</option>
+<option value="honam">호남선 (서울 ~ 목포)</option>
+<option value="jeolla">전라선 (서울 ~ 여수엑스포)</option>
+<option value="gyeongjeon">경전선 (서울 ~ 진주)</option>
+<option value="donghae">동해선 (서울 ~ 포항)</option>
 </select>
 </div>
 </header>
@@ -157,13 +160,14 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 const $=id=>document.getElementById(id);
 const DAY=86400;
 
-// 노선 데이터 정의
 const routes = {
  gyeongbu: {
   name: "경부선",
   startName: "서울",
   endName: "부산센텀",
   len: 417.4,
+  startHour: 5,
+  startMinute: 0,
   stations: [
    {name:"서울",km:0,limit:330,arr:"",dep:5*3600},
    {name:"광명",km:17,limit:330,arr:5*3600+20*60,dep:5*3600+23*60},
@@ -180,21 +184,87 @@ const routes = {
  },
  honam: {
   name: "호남선",
-  startName: "용산",
+  startName: "서울",
   endName: "목포",
-  len: 370.6, // 제공된 표 기준 용산~목포 거리[cite: 1]
+  len: 373.8,
+  startHour: 5,
+  startMinute: 10,
   stations: [
-   {name:"용산",km:0,limit:330,arr:"",dep:5*3600},
-   {name:"광명",km:14.5,limit:330,arr:5*3600+17*60,dep:5*3600+20*60}, // 표 기준 용산~광명 14.5km[cite: 1]
-   {name:"오송",km:129.4,limit:330,arr:6*3600+8*60,dep:6*3600+11*60}, // 표 기준 용산~오송 129.4km[cite: 1]
-   {name:"공주",km:161.6,limit:330,arr:6*3600+22*60,dep:6*3600+25*60}, // 표 기준 용산~공주 161.6km[cite: 1]
-   {name:"익산",km:205.4,limit:330,arr:6*3600+41*60,dep:6*3600+46*60}, // 표 기준 용산~익산 205.4km[cite: 1]
-   {name:"정읍",km:250.8,limit:330,arr:7*3600+5*60,dep:7*3600+8*60}, // 표 기준 용산~정읍 250.8km[cite: 1]
-   {name:"광주송정",km:303.8,limit:330,arr:7*3600+28*60,dep:7*3600+33*60}, // 표 기준 용산~광주송정 303.8km[cite: 1]
-   {name:"나주",km:322.8,limit:330,arr:7*3600+43*60,dep:7*3600+46*60}, // 표 기준 용산~나주 322.8km[cite: 1]
-   {name:"목포",km:370.6,limit:330,arr:8*3600+8*60,dep:""} // 표 기준 용산~목포 370.6km[cite: 1]
+   {name:"서울",km:0,limit:330,arr:"",dep:5*3600+10*60},
+   {name:"용산",km:3.2,limit:330,arr:5*3600+15*60,dep:5*3600+17*60},
+   {name:"광명",km:17.7,limit:330,arr:5*3600+27*60,dep:5*3600+30*60},
+   {name:"오송",km:132.6,limit:330,arr:6*3600+18*60,dep:6*3600+21*60},
+   {name:"공주",km:164.8,limit:330,arr:6*3600+32*60,dep:6*3600+35*60},
+   {name:"익산",km:208.6,limit:330,arr:6*3600+51*60,dep:6*3600+56*60},
+   {name:"정읍",km:254.0,limit:330,arr:7*3600+15*60,dep:7*3600+18*60},
+   {name:"광주송정",km:307.0,limit:330,arr:7*3600+38*60,dep:7*3600+43*60},
+   {name:"나주",km:326.0,limit:330,arr:7*3600+53*60,dep:7*3600+56*60},
+   {name:"목포",km:373.8,limit:330,arr:8*3600+18*60,dep:""}
   ],
-  majorMarks: [{n:"용산",k:0},{n:"광명",k:14.5},{n:"오송",k:129.4},{n:"익산",k:205.4},{n:"광주송정",k:303.8},{n:"목포",k:370.6}]
+  majorMarks: [{n:"서울",k:0},{n:"광명",k:17.7},{n:"오송",k:132.6},{n:"익산",k:208.6},{n:"광주송정",k:307.0},{n:"목포",k:373.8}]
+ },
+ jeolla: {
+  name: "전라선",
+  startName: "서울",
+  endName: "여수엑스포",
+  len: 389.0,
+  startHour: 5,
+  startMinute: 15,
+  stations: [
+   {name:"서울",km:0,limit:330,arr:"",dep:5*3600+15*60},
+   {name:"용산",km:3.2,limit:330,arr:5*3600+20*60,dep:5*3600+22*60},
+   {name:"광명",km:17.7,limit:330,arr:5*3600+32*60,dep:5*3600+35*60},
+   {name:"오송",km:132.6,limit:330,arr:6*3600+23*60,dep:6*3600+26*60},
+   {name:"익산",km:208.6,limit:330,arr:6*3600+56*60,dep:7*3600+1*60},
+   {name:"전주",km:234.1,limit:330,arr:7*3600+15*60,dep:7*3600+20*60},
+   {name:"남원",km:288.1,limit:330,arr:7*3600+47*60,dep:7*3600+50*60},
+   {name:"곡성",km:305.7,limit:330,arr:8*3600+0*60,dep:8*3600+3*60},
+   {name:"순천",km:338.9,limit:330,arr:8*3600+22*60,dep:8*3600+27*60},
+   {name:"여천",km:377.9,limit:330,arr:8*3600+47*60,dep:8*3600+50*60},
+   {name:"여수엑스포",km:389.0,limit:330,arr:9*3600+0*60,dep:""}
+  ],
+  majorMarks: [{n:"서울",k:0},{n:"오송",k:132.6},{n:"익산",k:208.6},{n:"전주",k:234.1},{n:"순천",k:338.9},{n:"여수엑스포",k:389.0}]
+ },
+ gyeongjeon: {
+  name: "경전선",
+  startName: "서울",
+  endName: "진주",
+  len: 405.0,
+  startHour: 5,
+  startMinute: 20,
+  stations: [
+   {name:"서울",km:0,limit:330,arr:"",dep:5*3600+20*60},
+   {name:"광명",km:17,limit:330,arr:5*3600+37*60,dep:5*3600+40*60},
+   {name:"천안아산",km:96.5,limit:330,arr:6*3600+10*60,dep:6*3600+13*60},
+   {name:"오송",km:131.5,limit:330,arr:6*3600+30*60,dep:6*3600+33*60},
+   {name:"대전",km:166.3,limit:330,arr:6*3600+50*60,dep:6*3600+55*60}, // 대전 5분
+   {name:"동대구",km:293.1,limit:330,arr:7*3600+40*60,dep:7*3600+45*60}, // 동대구 5분
+   {name:"밀양",km:381.6,limit:330,arr:8*3600+23*60,dep:8*3600+28*60}, // 밀양 5분 (표 기준 381.6km)[cite: 5]
+   {name:"창원중앙",km:417.2,limit:330,arr:8*3600+50*60,dep:8*3600+53*60}, // 3분
+   {name:"창원",km:420.8,limit:330,arr:8*3600+56*60,dep:8*3600+59*60}, // 3분
+   {name:"마산",km:426.4,limit:330,arr:9*3600+8*60,dep:9*3600+13*60}, // 마산 5분
+   {name:"진주",km:452.0,limit:330,arr:9*3600+32*60,dep:""}
+  ],
+  majorMarks: [{n:"서울",k:0},{n:"대전",k:166.3},{n:"동대구",k:293.1},{n:"밀양",k:381.6},{n:"마산",k:426.4},{n:"진주",k:452.0}]
+ },
+ donghae: {
+  name: "동해선",
+  startName: "서울",
+  endName: "포항",
+  len: 365.0,
+  startHour: 5,
+  startMinute: 25,
+  stations: [
+   {name:"서울",km:0,limit:330,arr:"",dep:5*3600+25*60},
+   {name:"광명",km:17,limit:330,arr:5*3600+42*60,dep:5*3600+45*60},
+   {name:"천안아산",km:96.5,limit:330,arr:6*3600+15*60,dep:6*3600+18*60},
+   {name:"오송",km:131.5,limit:330,arr:6*3600+35*60,dep:6*3600+38*60},
+   {name:"대전",km:166.3,limit:330,arr:6*3600+55*60,dep:7*3600+0*60}, // 대전 5분
+   {name:"동대구",km:293.1,limit:330,arr:7*3600+45*60,dep:7*3600+50*60}, // 동대구 5분
+   {name:"서경주",km:342.3,limit:330,arr:8*3600+20*60,dep:8*3600+23*60},
+   {name:"포항",km:365.0,limit:330,arr:8*3600+40*60,dep:""}
+  ],
+  majorMarks: [{n:"서울",k:0},{n:"대전",k:166.3},{n:"동대구",k:293.1},{n:"포항",k:365.0}]
  }
 };
 
@@ -342,9 +412,10 @@ function toggleDoor(side){
 function initTrains(){
  trains.length = 0;
  $("baseTrain").innerHTML = "";
+ const baseStartSec = activeRoute.startHour * 3600 + activeRoute.startMinute * 60;
  for(let n=1;n<=109;n+=2){
   const id="KTX"+String(n).padStart(3,"0");
-  trains.push({id,km:-1,speed:0,active:false,departure:5*3600+((n-1)/2)*1200});
+  trains.push({id,km:-1,speed:0,active:false,departure:baseStartSec+((n-1)/2)*1200});
   const opt=document.createElement("option");opt.value=id;opt.textContent=id;
   $("baseTrain").appendChild(opt);
  }
@@ -360,8 +431,10 @@ function getTrainState(t, nowSec){
   let startKm=stations[i].km;
   let endKm=stations[i+1].km;
   let dist=endKm - startKm;
-  let isLongStop=(stations[i].name==="대전" || stations[i].name==="동대구" || stations[i].name==="익산" || stations[i].name==="광주송정");
-  let stopTime=(i===0)?0:(isLongStop?300:180);
+  
+  let sName = stations[i].name;
+  let isLongStop = (sName==="대전" || sName==="동대구" || sName==="익산" || sName==="광주송정" || sName==="전주" || sName==="순천" || sName==="밀양" || sName==="마산");
+  let stopTime = (i===0)?0:(isLongStop?300:180);
   
   let a=1.0; 
   let vPeak=Math.min(300, Math.sqrt(dist * a * 3600));
@@ -660,7 +733,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 경부선/호남선 선택 기능 추가 완료");
+log("시뮬레이터 시작 · 경전선 밀양·마산 5분, 나머지 3분 정차 적용 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
