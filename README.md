@@ -55,7 +55,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <div class="row between">
  <div>
   <h1>ERR · 통합 철도 시뮬레이터</h1>
-  <p>경부선 및 호남선 연동 운행 시뮬레이터 (23:00 막차/첫차 기준)</p>
+  <p>기기 시각 연동 실시간 운행 (23:00 막차 기준, 20분 간격)</p>
  </div>
  <div>
   <label for="lineSelect" style="display:inline;margin-right:8px;">노선 선택:</label>
@@ -208,7 +208,7 @@ const lineData={
    {name:"임곡",km:174.7,stop:0},
    {name:"하남",km:181.2,stop:0},
    {name:"북송정",km:184.0,stop:0},
-   {name:"광주송정",km:185.7,stop:300}, // 5분 정차[span_5](start_span)[span_5](end_span)
+   {name:"광주송정",km:185.7,stop:300}, // 광주송정 5분 정차[span_5](start_span)[span_5](end_span)
    {name:"송정리",km:185.7,stop:0},
    {name:"노안",km:195.0,stop:0},
    {name:"나주",km:201.5,stop:0},
@@ -281,6 +281,67 @@ function log(msg){
  while($("log").children.length>100)$("log").lastChild.remove();
 }
 
+// 기기 시각표 계산 함수 (기기 시간 기준으로 각 역의 도/출발 시각 산출)
+function getTrainSchedule(depTime){
+ let schedule=[];
+ let curTime=depTime;
+ for(let i=0; i<stations.length; i++){
+  let arrTime = curTime;
+  if(i>0){
+   let dist = stations[i].km - stations[i-1].km;
+   let travelTime = (dist / 160) * 3600;
+   arrTime = schedule[i-1].dep + travelTime;
+  }
+  let depTimeStation = arrTime + stations[i].stop;
+  schedule.push({name:stations[i].name, km:stations[i].km, arr:arrTime, dep:depTimeStation});
+  curTime = depTimeStation;
+ }
+ return schedule;
+}
+
+// 기기 시각에 맞춰 타 열차의 위치를 실시간 연동
+function getTrainState(t, nowSec){
+ let elapsed=(nowSec-t.departure+DAY)%DAY;
+ if(elapsed<0 || elapsed>25000) return {active:false, km:-1, speed:0};
+ 
+ let sched = getTrainSchedule(t.departure);
+ let currentT=0;
+ for(let i=0; i<stations.length-1; i++){
+  let startKm=stations[i].km;
+  let endKm=stations[i+1].km;
+  let dist=endKm - startKm;
+  let stopTime=stations[i].stop;
+  
+  let a=1.0; 
+  let vPeak=Math.min(300, Math.sqrt(dist * a * 3600));
+  let accelTime=vPeak / a, accelDist=0.5 * a * (accelTime ** 2) / 3600;
+  let decelTime=vPeak / a, decelDist=0.5 * a * (decelTime ** 2) / 3600;
+  let cruiseDist=Math.max(0, dist - accelDist - decelDist);
+  let cruiseTime=cruiseDist / (vPeak / 3600);
+  let sectionTime=accelTime + cruiseTime + decelTime + stopTime;
+  
+  if(elapsed >= currentT && elapsed < currentT + sectionTime){
+   let relT=elapsed - currentT;
+   let curSpd=0, currentKm=startKm;
+   if(relT < accelTime){
+    curSpd=relT * a; currentKm=startKm + 0.5 * a * (relT ** 2) / 3600;
+   }else if(relT < accelTime + cruiseTime){
+    curSpd=vPeak; currentKm=startKm + accelDist + (relT - accelTime) * (vPeak / 3600);
+   }else if(relT < accelTime + cruiseTime + decelTime){
+    let dt=relT - (accelTime + cruiseTime);
+    curSpd=Math.max(0, vPeak - dt * a);
+    currentKm=endKm - decelDist + curSpd * (dt / 3600) + 0.5 * a * (dt ** 2) / 3600;
+   }else{
+    curSpd=0; currentKm=endKm;
+   }
+   return {active:true, km:currentKm, speed:curSpd};
+  }
+  currentT += sectionTime;
+ }
+ if(elapsed >= currentT) return {active:true, km:LEN, speed:0};
+ return {active:false, km:-1, speed:0};
+}
+
 function initTrains(){
  trains=[];
  const baseDep=lineData[currentLineKey].startDep;
@@ -332,64 +393,6 @@ function applyEmergency(){
 function releaseBrake(){emergency=false;power=0;notchLabel="N";log("비상제동 해제");render()}
 function toggleVCB(){vcb=!vcb;if(!vcb){power=0;notchLabel="N"}log("VCB "+(vcb?"ON":"OFF"));render()}
 function togglePantograph(){pantograph=!pantograph;if(!pantograph){power=0;notchLabel="N"}log("팬터그래프 "+(pantograph?"올림":"내림"));render()}
-
-function getTrainSchedule(depTime){
- let schedule=[];
- let curTime=depTime;
- for(let i=0; i<stations.length; i++){
-  let arrTime = curTime;
-  if(i>0){
-   let dist = stations[i].km - stations[i-1].km;
-   let travelTime = (dist / 160) * 3600;
-   arrTime = schedule[i-1].dep + travelTime;
-  }
-  let depTimeStation = arrTime + stations[i].stop;
-  schedule.push({name:stations[i].name, km:stations[i].km, arr:arrTime, dep:depTimeStation});
-  curTime = depTimeStation;
- }
- return schedule;
-}
-
-function getTrainState(t, nowSec){
- let elapsed=(nowSec-t.departure+DAY)%DAY;
- if(elapsed<0 || elapsed>25000) return {active:false, km:-1, speed:0};
- 
- let currentT=0;
- for(let i=0; i<stations.length-1; i++){
-  let startKm=stations[i].km;
-  let endKm=stations[i+1].km;
-  let dist=endKm - startKm;
-  let stopTime=stations[i].stop;
-  
-  let a=1.0; 
-  let vPeak=Math.min(300, Math.sqrt(dist * a * 3600));
-  let accelTime=vPeak / a, accelDist=0.5 * a * (accelTime ** 2) / 3600;
-  let decelTime=vPeak / a, decelDist=0.5 * a * (decelTime ** 2) / 3600;
-  let cruiseDist=Math.max(0, dist - accelDist - decelDist);
-  let cruiseTime=cruiseDist / (vPeak / 3600);
-  let sectionTime=accelTime + cruiseTime + decelTime + stopTime;
-  
-  if(elapsed >= currentT && elapsed < currentT + sectionTime){
-   let relT=elapsed - currentT;
-   let curSpd=0, currentKm=startKm;
-   if(relT < accelTime){
-    curSpd=relT * a; currentKm=startKm + 0.5 * a * (relT ** 2) / 3600;
-   }else if(relT < accelTime + cruiseTime){
-    curSpd=vPeak; currentKm=startKm + accelDist + (relT - accelTime) * (vPeak / 3600);
-   }else if(relT < accelTime + cruiseTime + decelTime){
-    let dt=relT - (accelTime + cruiseTime);
-    curSpd=Math.max(0, vPeak - dt * a);
-    currentKm=endKm - decelDist + curSpd * (dt / 3600) + 0.5 * a * (dt ** 2) / 3600;
-   }else{
-    curSpd=0; currentKm=endKm;
-   }
-   return {active:true, km:currentKm, speed:curSpd};
-  }
-  currentT += sectionTime;
- }
- if(elapsed >= currentT) return {active:true, km:LEN, speed:0};
- return {active:false, km:-1, speed:0};
-}
 
 function updateOtherTrains(){
  const now=deviceSeconds();
@@ -550,7 +553,7 @@ updateTimetable();
 updateOtherTable();
 updateTrack();
 render();
-log("통합 철도 시뮬레이터 시작 (23시 막차 발차 연동)");
+log("기기 시각 연동 통합 시뮬레이터 시작 (23시 막차 기준)");
 requestAnimationFrame(tick);
 </script>
 </body>
