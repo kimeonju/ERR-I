@@ -55,7 +55,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <div class="row between">
  <div>
   <h1>ERR · 통합 철도 시뮬레이터</h1>
-  <p>실제 기기 시각 연동 (23:00 막차 기준, 20분 간격)</p>
+  <p>시뮬레이터 강제 시간 연동 (23:00 막차 기준)</p>
  </div>
  <div>
   <label for="lineSelect" style="display:inline;margin-right:8px;">노선 선택:</label>
@@ -159,7 +159,7 @@ const DAY=86400;
 const lineData={
  gyeongbu:{
   name:"경부선",
-  startDep:23*3600, // 23:00 출발 (막차/첫차 기준)
+  startDep:23*3600, // 23:00 출발
   stations:[
    {name:"서울",km:0,stop:0},
    {name:"광명",km:17,stop:180},
@@ -181,24 +181,24 @@ const lineData={
    {name:"서대전",km:5.7,stop:0},
    {name:"가수원",km:11.8,stop:0},
    {name:"흑석리",km:17.3,stop:0},
-   {name:"계룡",km:25.4,stop:180},     // 3분 정차[span_0](start_span)[span_0](end_span)
+   {name:"계룡",km:25.4,stop:180},[span_1](start_span)[span_1](end_span)
    {name:"개태사",km:34.7,stop:0},
    {name:"연산",km:39.6,stop:0},
    {name:"부황",km:44.5,stop:0},
-   {name:"논산",km:50.8,stop:180},     // 3분 정차[span_1](start_span)[span_1](end_span)
+   {name:"논산",km:50.8,stop:180},[span_2](start_span)[span_2](end_span)
    {name:"채운",km:57.5,stop:0},
    {name:"강경",km:60.7,stop:0},
    {name:"용동",km:66.7,stop:0},
    {name:"함열",km:71.8,stop:0},
    {name:"황등",km:81.2,stop:0},
-   {name:"익산",km:87.9,stop:180},     // 3분 정차[span_2](start_span)[span_2](end_span)
+   {name:"익산",km:87.9,stop:180},[span_3](start_span)[span_3](end_span)
    {name:"부용",km:95.3,stop:0},
    {name:"용룡",km:98.5,stop:0},
-   {name:"김제",km:105.6,stop:180},    // 3분 정차[span_3](start_span)[span_3](end_span)
+   {name:"김제",km:105.6,stop:180},[span_4](start_span)[span_4](end_span)
    {name:"감곡",km:112.4,stop:0},
    {name:"신태인",km:117.9,stop:0},
    {name:"초강",km:123.5,stop:0},
-   {name:"정읍",km:131.4,stop:180},    // 3분 정차[span_4](start_span)[span_4](end_span)
+   {name:"정읍",km:131.4,stop:180},[span_5](start_span)[span_5](end_span)
    {name:"천원",km:137.4,stop:0},
    {name:"노령",km:141.6,stop:0},
    {name:"백양사",km:148.6,stop:0},
@@ -207,17 +207,17 @@ const lineData={
    {name:"임곡",km:174.7,stop:0},
    {name:"하남",km:181.2,stop:0},
    {name:"북송정",km:184.0,stop:0},
-   {name:"광주송정",km:185.7,stop:300}, // 5분 정차[span_5](start_span)[span_5](end_span)
+   {name:"광주송정",km:185.7,stop:300},[span_6](start_span)[span_6](end_span)
    {name:"송정리",km:185.7,stop:0},
    {name:"노안",km:195.0,stop:0},
    {name:"나주",km:201.5,stop:0},
    {name:"다시",km:208.9,stop:0},
    {name:"고막원",km:212.1,stop:0},
-   {name:"함평",km:218.9,stop:180},    // 3분 정차[span_6](start_span)[span_6](end_span)
+   {name:"함평",km:218.9,stop:180},[span_7](start_span)[span_7](end_span)
    {name:"무안",km:226.5,stop:0},
    {name:"몽탄",km:230.3,stop:0},
    {name:"일로",km:239.9,stop:0},
-   {name:"임성리",km:245.2,stop:180},   // 3분 정차[span_7](start_span)[span_7](end_span)
+   {name:"임성리",km:245.2,stop:180},[span_8](start_span)[span_8](end_span)
    {name:"목포",km:252.5,stop:0}
   ]
  }
@@ -234,6 +234,9 @@ let lastFrame=performance.now(),vigilanceLast=performance.now(),warningStart=nul
 let overtakeMode=false,targetGap=2,targetSpeed=300,notchLabel="N";
 let trains=[],heldKeys=new Set();
 let warningSoundInterval=null;
+
+// 테스트를 위해 시뮬레이터 내부 시각을 23시 0분 0초로 고정 (원하시면 수정 가능)
+let simulatedTimeOffset = 23 * 3600; 
 
 function playWarningSound() {
  try {
@@ -259,14 +262,17 @@ function stopWarningSound() {
  if(warningSoundInterval){ clearInterval(warningSoundInterval); warningSoundInterval=null; }
 }
 
-// 실제 기기 시각 연동 함수
 function deviceSeconds(){
- const d=new Date();
- return d.getHours()*3600 + d.getMinutes()*60 + d.getSeconds() + d.getMilliseconds()/1000;
+ // 실제 기기 시간 대신 23시 이후로 강제 흘러가도록 시뮬레이션 시간 적용
+ simulatedTimeOffset = (simulatedTimeOffset + 0.05) % DAY;
+ return simulatedTimeOffset;
 }
 function deviceTimeText(){
- const d=new Date();
- return [d.getHours(),d.getMinutes(),d.getSeconds()].map(v=>String(v).padStart(2,"0")).join(":");
+ let sec = Math.floor(simulatedTimeOffset);
+ let h = Math.floor(sec/3600)%24;
+ let m = Math.floor((sec%3600)/60);
+ let s = sec%60;
+ return [h,m,s].map(v=>String(v).padStart(2,"0")).join(":");
 }
 function formatSec(sec){
  if(isNaN(sec)||sec==="")return "-";
@@ -281,7 +287,6 @@ function log(msg){
  while($("log").children.length>100)$("log").lastChild.remove();
 }
 
-// 기기 시각 기준 시간표 산출
 function getTrainSchedule(depTime){
  let schedule=[];
  let curTime=depTime;
@@ -299,7 +304,6 @@ function getTrainSchedule(depTime){
  return schedule;
 }
 
-// 실제 기기 시각(deviceSeconds)을 바탕으로 다른 KTX 열차 위치 연동
 function getTrainState(t, nowSec){
  let elapsed=(nowSec-t.departure+DAY)%DAY;
  if(elapsed<0 || elapsed>25000) return {active:false, km:-1, speed:0};
@@ -362,6 +366,7 @@ function switchLine(lineKey){
  stations=lineData[lineKey].stations;
  LEN=stations[stations.length-1].km;
  distance=0; speed=0; power=0; notchLabel="N"; arrived=false;
+ simulatedTimeOffset = lineData[lineKey].startDep; // 노선 변경 시 출발 시각으로 리셋
  $("trackStart").textContent=stations[0].name+" 0.0 km";
  $("trackEnd").textContent=stations[stations.length-1].name+" "+LEN+" km";
  initTrains();
@@ -552,7 +557,7 @@ updateTimetable();
 updateOtherTable();
 updateTrack();
 render();
-log("기기 실시간 시각 연동 시뮬레이터 시작");
+log("시뮬레이터 시간 강제 연동 및 다른 KTX 표출 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
