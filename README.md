@@ -126,7 +126,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <div class="stat"><small>경계장치</small><strong id="vigilance" class="good">정상</strong></div>
 <div class="stat"><small>비상제동</small><strong id="emergencyStatus">해제</strong></div>
 </div>
-<p class="muted">55초 동안 입력이 없으면 경고, 추가 15초 동안 응답이 없으면 비상제동합니다.</p>
+<p class="muted">55초 동안 입력이 없으면 경고음, 추가 15초 동안 응답이 없으면 비상제동합니다.</p>
 <button id="pedal">Space · 경계 페달</button> <span id="pedalTime" class="muted">입력 대기</span>
 </section>
 
@@ -159,6 +159,16 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 "use strict";
 const $=id=>document.getElementById(id);
 const DAY=86400;
+
+let audioCtx = null;
+function initAudio() {
+ if (!audioCtx) {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+ }
+ if (audioCtx.state === 'suspended') {
+  audioCtx.resume();
+ }
+}
 
 const routes = {
  gyeongbu: {
@@ -307,13 +317,14 @@ function changeRoute(key){
 }
 
 function playWarningSound() {
+ initAudio();
  try {
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'sine';
   osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start();
@@ -368,6 +379,7 @@ function currentStationName(){
 }
 function nextStationIndex(){return stations.findIndex(s=>s.km>distance+.02)}
 function setNotch(v){
+ initAudio();
  if(emergency&&!v.startsWith("B")&&v!=="N")return;
  if(/^P[1-5]$/.test(v)){
   if(!vcb||!pantograph||direction===0){
@@ -380,25 +392,32 @@ function setNotch(v){
  render();
 }
 function setDirection(d){
+ initAudio();
  if(speed>.1){log("정차 후 방향 변경 필요");return}
  direction=d;log(d===1?"전진 설정":"후진 설정");render();
 }
 function applyEmergency(){
+ initAudio();
  emergency=true;power=-5;notchLabel="EB";
  stopWarningSound();
  log("비상제동 작동");
  render();
 }
-function releaseBrake(){emergency=false;power=0;notchLabel="N";log("비상제동 해제");render()}
-function toggleVCB(){vcb=!vcb;if(!vcb){power=0;notchLabel="N"}log("VCB "+(vcb?"ON":"OFF"));render()}
-function togglePantograph(){pantograph=!pantograph;if(!pantograph){power=0;notchLabel="N"}log("팬터그래프 "+(pantograph?"올림":"내림"));render()}
-function setTurnout(v){turnout=v;render();log("진로 설정: "+v)}
+function releaseBrake(){
+ initAudio();
+ emergency=false;power=0;notchLabel="N";log("비상제동 해제");render();
+}
+function toggleVCB(){initAudio();vcb=!vcb;if(!vcb){power=0;notchLabel="N"}log("VCB "+(vcb?"ON":"OFF"));render()}
+function togglePantograph(){initAudio();pantograph=!pantograph;if(!pantograph){power=0;notchLabel="N"}log("팬터그래프 "+(pantograph?"올림":"내림"));render()}
+function setTurnout(v){initAudio();turnout=v;render();log("진로 설정: "+v)}
 function togglePermission(side){
+ initAudio();
  if(side==="L"){allowL=!allowL;if(!allowL)leftDoor=false}
  else{allowR=!allowR;if(!allowR)rightDoor=false}
  render();
 }
 function toggleDoor(side){
+ initAudio();
  if(speed>.1){log("주행 중 출입문 조작 불가");return}
  if(side==="L"){
   if(!allowL){log("좌측 출입문 허가가 필요합니다");return}
@@ -662,14 +681,16 @@ function tick(now){
 }
 
 function pedalPress(){
+ initAudio();
  vigilanceLast=performance.now();
  warningStart=null;
  stopWarningSound();
  $("pedalTime").textContent="최근 입력: "+deviceTimeText();
 }
-function toggleOvertake(){overtakeMode=!overtakeMode;log("추월 모드 "+(overtakeMode?"ON · 앞앞차 기준":"OFF"));render();updateTrack()}
+function toggleOvertake(){initAudio();overtakeMode=!overtakeMode;log("추월 모드 "+(overtakeMode?"ON · 앞앞차 기준":"OFF"));render();updateTrack()}
 
 function notchUp(){
+ initAudio();
  if(power < 0){
   setNotch(power === -1 ? "N" : "B" + (Math.abs(power) - 1));
  } else if(power === 0){
@@ -680,6 +701,7 @@ function notchUp(){
 }
 
 function notchDown(){
+ initAudio();
  if(power > 0){
   setNotch(power === 1 ? "N" : "P" + (power - 1));
  } else if(power === 0){
@@ -690,6 +712,7 @@ function notchDown(){
 }
 
 $("routeSelect").addEventListener("change", (e)=>{
+ initAudio();
  changeRoute(e.target.value);
 });
 
@@ -709,6 +732,7 @@ $("rightDoor").addEventListener("click",()=>toggleDoor("R"));
 $("pedal").addEventListener("click",pedalPress);
 $("overtake").addEventListener("click",toggleOvertake);
 $("setGap").addEventListener("click",()=>{
+ initAudio();
  const v=Number($("gapInput").value);
  if(Number.isFinite(v)&&v>=.5&&v<=20){targetGap=v;log("목표 간격 "+v.toFixed(1)+" km");render()}
  else alert("목표 간격은 0.5~20km로 입력하세요.");
@@ -716,6 +740,7 @@ $("setGap").addEventListener("click",()=>{
 $("baseTrain").addEventListener("change",()=>{render();updateTrack()});
 document.querySelectorAll("[data-notch]").forEach(b=>b.addEventListener("click",()=>setNotch(b.dataset.notch)));
 document.addEventListener("keydown",e=>{
+ initAudio();
  if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName))return;
  if(e.code==="Space"){e.preventDefault();if(!heldKeys.has("Space"))pedalPress();heldKeys.add("Space");return}
  if(e.code==="ArrowUp"||e.code==="ArrowDown"){e.preventDefault();}
@@ -734,7 +759,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 비상제동 및 노선 교체 기능 적용 완료");
+log("시뮬레이터 시작 · 오디오 컨텍스트 자동 활성화 적용 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
