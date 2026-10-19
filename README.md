@@ -286,7 +286,8 @@ function changeRoute(key){
  activeRoute = routes[key];
  LEN = activeRoute.len;
  stations = activeRoute.stations;
- // 현위치 유지: distance가 새 노선 길이보다 크면 새 노선 길이에 맞게 조정
+ 
+ // 현위치 유지 (노선 최대 길이를 넘지 않도록 보정)
  if(distance > LEN) distance = LEN;
  arrived = (distance >= LEN);
  
@@ -303,7 +304,7 @@ function changeRoute(key){
  updateOtherTable();
  updateTrack();
  render();
- log(activeRoute.name + " 노선으로 변경되었습니다. (현위치: " + distance.toFixed(1) + " km)");
+ log(activeRoute.name + " 노선으로 변경되었습니다. (현위치 유지: " + distance.toFixed(1) + " km, 속도: " + Math.round(speed) + " km/h)");
 }
 
 function playWarningSound() {
@@ -734,7 +735,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 노선 교체 시 현위치 유지 기능 적용 완료");
+log("시뮬레이터 시작 · 속력·위치·상태 유지 노선 교체 기능 적용 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
