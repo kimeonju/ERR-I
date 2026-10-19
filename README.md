@@ -229,7 +229,7 @@ const routes = {
   name: "경전선",
   startName: "서울",
   endName: "진주",
-  len: 405.0,
+  len: 452.0,
   startHour: 5,
   startMinute: 20,
   stations: [
@@ -237,12 +237,12 @@ const routes = {
    {name:"광명",km:17,limit:330,arr:5*3600+37*60,dep:5*3600+40*60},
    {name:"천안아산",km:96.5,limit:330,arr:6*3600+10*60,dep:6*3600+13*60},
    {name:"오송",km:131.5,limit:330,arr:6*3600+30*60,dep:6*3600+33*60},
-   {name:"대전",km:166.3,limit:330,arr:6*3600+50*60,dep:6*3600+55*60}, // 대전 5분
-   {name:"동대구",km:293.1,limit:330,arr:7*3600+40*60,dep:7*3600+45*60}, // 동대구 5분
-   {name:"밀양",km:381.6,limit:330,arr:8*3600+23*60,dep:8*3600+28*60}, // 밀양 5분 (표 기준 381.6km)[cite: 5]
-   {name:"창원중앙",km:417.2,limit:330,arr:8*3600+50*60,dep:8*3600+53*60}, // 3분
-   {name:"창원",km:420.8,limit:330,arr:8*3600+56*60,dep:8*3600+59*60}, // 3분
-   {name:"마산",km:426.4,limit:330,arr:9*3600+8*60,dep:9*3600+13*60}, // 마산 5분
+   {name:"대전",km:166.3,limit:330,arr:6*3600+50*60,dep:6*3600+55*60},
+   {name:"동대구",km:293.1,limit:330,arr:7*3600+40*60,dep:7*3600+45*60},
+   {name:"밀양",km:381.6,limit:330,arr:8*3600+23*60,dep:8*3600+28*60},
+   {name:"창원중앙",km:417.2,limit:330,arr:8*3600+50*60,dep:8*3600+53*60},
+   {name:"창원",km:420.8,limit:330,arr:8*3600+56*60,dep:8*3600+59*60},
+   {name:"마산",km:426.4,limit:330,arr:9*3600+8*60,dep:9*3600+13*60},
    {name:"진주",km:452.0,limit:330,arr:9*3600+32*60,dep:""}
   ],
   majorMarks: [{n:"서울",k:0},{n:"대전",k:166.3},{n:"동대구",k:293.1},{n:"밀양",k:381.6},{n:"마산",k:426.4},{n:"진주",k:452.0}]
@@ -259,8 +259,8 @@ const routes = {
    {name:"광명",km:17,limit:330,arr:5*3600+42*60,dep:5*3600+45*60},
    {name:"천안아산",km:96.5,limit:330,arr:6*3600+15*60,dep:6*3600+18*60},
    {name:"오송",km:131.5,limit:330,arr:6*3600+35*60,dep:6*3600+38*60},
-   {name:"대전",km:166.3,limit:330,arr:6*3600+55*60,dep:7*3600+0*60}, // 대전 5분
-   {name:"동대구",km:293.1,limit:330,arr:7*3600+45*60,dep:7*3600+50*60}, // 동대구 5분
+   {name:"대전",km:166.3,limit:330,arr:6*3600+55*60,dep:7*3600+0*60},
+   {name:"동대구",km:293.1,limit:330,arr:7*3600+45*60,dep:7*3600+50*60},
    {name:"서경주",km:342.3,limit:330,arr:8*3600+20*60,dep:8*3600+23*60},
    {name:"포항",km:365.0,limit:330,arr:8*3600+40*60,dep:""}
   ],
@@ -286,13 +286,14 @@ function changeRoute(key){
  activeRoute = routes[key];
  LEN = activeRoute.len;
  stations = activeRoute.stations;
- distance = 0;
- speed = 0;
+ // 현위치 유지: distance가 새 노선 길이보다 크면 새 노선 길이에 맞게 조정
+ if(distance > LEN) distance = LEN;
+ arrived = (distance >= LEN);
+ 
  stationIndex = 0;
- arrived = false;
- power = 0;
- notchLabel = "N";
- emergency = false;
+ for(let i=0; i<stations.length; i++){
+  if(stations[i].km <= distance) stationIndex = i;
+ }
  
  $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · 기기 시각 연동 시뮬레이터";
  document.querySelector("#trackTerminals").innerHTML = `<span class="muted">${activeRoute.startName} 0 km</span><span class="muted">${activeRoute.endName} ${LEN} km</span>`;
@@ -302,7 +303,7 @@ function changeRoute(key){
  updateOtherTable();
  updateTrack();
  render();
- log(activeRoute.name + " 노선으로 변경되었습니다.");
+ log(activeRoute.name + " 노선으로 변경되었습니다. (현위치: " + distance.toFixed(1) + " km)");
 }
 
 function playWarningSound() {
@@ -733,7 +734,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 경전선 밀양·마산 5분, 나머지 3분 정차 적용 완료");
+log("시뮬레이터 시작 · 노선 교체 시 현위치 유지 기능 적용 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
