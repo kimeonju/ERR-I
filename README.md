@@ -55,11 +55,11 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <header>
 <div>
 <h1>ERR · Eco Rapid Rail</h1>
-<p id="headerSub">오프라인 · HTML 리더 최적화 시뮬레이터</p>
+<p id="headerSub">HTML 리더 완전 호환 시뮬레이터</p>
 </div>
 <div class="row">
-<button id="saveGame" class="active">💾 게임 저장</button>
-<button id="loadGame">📂 저장 불러오기</button>
+<button id="saveGame" class="active">💾 저장</button>
+<button id="loadGame">📂 불러오기</button>
 <div class="route-selector" style="margin-left:10px;">
 <label for="routeSelect" style="margin:0;font-weight:bold;">운행 노선:</label>
 <select id="routeSelect">
@@ -164,13 +164,23 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 const $=id=>document.getElementById(id);
 const DAY=86400;
 
+let memStorage = {};
+function safeSave(key, val){
+ try { localStorage.setItem(key, val); }
+ catch(e){ memStorage[key] = val; }
+}
+function safeLoad(key){
+ try { return localStorage.getItem(key) || memStorage[key] || null; }
+ catch(e){ return memStorage[key] || null; }
+}
+
 let audioCtx = null;
 function initAudio() {
  try {
   if (!audioCtx) {
    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  if (audioCtx.state === 'suspended') {
+  if (audioCtx && audioCtx.state === 'suspended') {
    audioCtx.resume();
   }
  } catch(e) {}
@@ -178,12 +188,7 @@ function initAudio() {
 
 const routes = {
  gyeongbu: {
-  name: "경부선",
-  startName: "서울",
-  endName: "부산센텀",
-  len: 417.4,
-  startHour: 5,
-  startMinute: 0,
+  name: "경부선", startName: "서울", endName: "부산센텀", len: 417.4, startHour: 5, startMinute: 0,
   stations: [
    {name:"서울",km:0,limit:330,arr:"",dep:5*3600},
    {name:"광명",km:17,limit:330,arr:5*3600+20*60,dep:5*3600+23*60},
@@ -199,12 +204,7 @@ const routes = {
   majorMarks: [{n:"서울",k:0},{n:"광명",k:17},{n:"대전",k:166.3},{n:"동대구",k:293.1},{n:"부산센텀",k:417.4}]
  },
  honam: {
-  name: "호남선",
-  startName: "서울",
-  endName: "목포",
-  len: 373.8,
-  startHour: 5,
-  startMinute: 10,
+  name: "호남선", startName: "서울", endName: "목포", len: 373.8, startHour: 5, startMinute: 10,
   stations: [
    {name:"서울",km:0,limit:330,arr:"",dep:5*3600+10*60},
    {name:"용산",km:3.2,limit:330,arr:5*3600+15*60,dep:5*3600+17*60},
@@ -220,12 +220,7 @@ const routes = {
   majorMarks: [{n:"서울",k:0},{n:"광명",k:17.7},{n:"오송",k:132.6},{n:"익산",k:208.6},{n:"광주송정",k:307.0},{n:"목포",k:373.8}]
  },
  jeolla: {
-  name: "전라선",
-  startName: "서울",
-  endName: "여수엑스포",
-  len: 389.0,
-  startHour: 5,
-  startMinute: 15,
+  name: "전라선", startName: "서울", endName: "여수엑스포", len: 389.0, startHour: 5, startMinute: 15,
   stations: [
    {name:"서울",km:0,limit:330,arr:"",dep:5*3600+15*60},
    {name:"용산",km:3.2,limit:330,arr:5*3600+20*60,dep:5*3600+22*60},
@@ -242,12 +237,7 @@ const routes = {
   majorMarks: [{n:"서울",k:0},{n:"오송",k:132.6},{n:"익산",k:208.6},{n:"전주",k:234.1},{n:"순천",k:338.9},{n:"여수엑스포",k:389.0}]
  },
  gyeongjeon: {
-  name: "경전선",
-  startName: "서울",
-  endName: "진주",
-  len: 452.0,
-  startHour: 5,
-  startMinute: 20,
+  name: "경전선", startName: "서울", endName: "진주", len: 452.0, startHour: 5, startMinute: 20,
   stations: [
    {name:"서울",km:0,limit:330,arr:"",dep:5*3600+20*60},
    {name:"광명",km:17,limit:330,arr:5*3600+37*60,dep:5*3600+40*60},
@@ -264,12 +254,7 @@ const routes = {
   majorMarks: [{n:"서울",k:0},{n:"대전",k:166.3},{n:"동대구",k:293.1},{n:"밀양",k:381.6},{n:"마산",k:426.4},{n:"진주",k:452.0}]
  },
  donghae: {
-  name: "동해선",
-  startName: "서울",
-  endName: "포항",
-  len: 365.0,
-  startHour: 5,
-  startMinute: 25,
+  name: "동해선", startName: "서울", endName: "포항", len: 365.0, startHour: 5, startMinute: 25,
   stations: [
    {name:"서울",km:0,limit:330,arr:"",dep:5*3600+25*60},
    {name:"광명",km:17,limit:330,arr:5*3600+42*60,dep:5*3600+45*60},
@@ -292,7 +277,7 @@ let stations = activeRoute.stations;
 let speed=0,distance=0,direction=0,power=0,vcb=false,pantograph=false;
 let emergency=false,leftDoor=false,rightDoor=false,allowL=false,allowR=false;
 let turnout="직진",stationIndex=0,arrived=false;
-let lastFrame=performance.now(),vigilanceLast=performance.now(),warningStart=null;
+let lastFrame=Date.now(),vigilanceLast=Date.now(),warningStart=null;
 let overtakeMode=false,targetGap=2,targetSpeed=330,notchLabel="N";
 const trains=[],heldKeys=new Set();
 let warningSoundInterval = null;
@@ -304,22 +289,18 @@ function saveGameData(){
   allowL, allowR, turnout, stationIndex, arrived,
   overtakeMode, targetGap, notchLabel
  };
- try {
-  localStorage.setItem("err_save_data", JSON.stringify(data));
-  log("게임이 성공적으로 저장되었습니다.");
-  alert("게임 상태가 저장되었습니다!");
- } catch(e){
-  alert("로컬 환경 제한으로 저장 공간을 사용할 수 없습니다.");
- }
+ safeSave("err_save_data", JSON.stringify(data));
+ log("게임이 성공적으로 저장되었습니다.");
+ alert("게임 상태가 저장되었습니다!");
 }
 
 function loadGameData(){
+ const saved = safeLoad("err_save_data");
+ if(!saved){
+  alert("저장된 게임 데이터가 없습니다.");
+  return;
+ }
  try {
-  const saved = localStorage.getItem("err_save_data");
-  if(!saved){
-   alert("저장된 게임 데이터가 없습니다.");
-   return;
-  }
   const data = JSON.parse(saved);
   currentRouteKey = data.currentRouteKey;
   activeRoute = routes[currentRouteKey];
@@ -345,7 +326,7 @@ function loadGameData(){
   targetGap = data.targetGap;
   notchLabel = data.notchLabel;
 
-  $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · 오프라인 시뮬레이터";
+  $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · HTML 리더 호환";
   document.querySelector("#trackTerminals").innerHTML = `<span class="muted">${activeRoute.startName} 0 km</span><span class="muted">${activeRoute.endName} ${LEN} km</span>`;
   $("gapInput").value = targetGap;
   
@@ -375,7 +356,7 @@ function changeRoute(key){
   if(stations[i].km <= distance) stationIndex = i;
  }
  
- $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · 오프라인 시뮬레이터";
+ $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · HTML 리더 호환";
  document.querySelector("#trackTerminals").innerHTML = `<span class="muted">${activeRoute.startName} 0 km</span><span class="muted">${activeRoute.endName} ${LEN} km</span>`;
  
  initTrains();
@@ -434,7 +415,9 @@ function formatSec(sec){
  let h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60);
  return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
 }
-function syncClock(){$("clock").textContent=deviceTimeText()}
+function syncClock(){
+ if($("clock")) $("clock").textContent=deviceTimeText();
+}
 function log(msg){
  const el=document.createElement("div");
  el.textContent="["+deviceTimeText()+"] "+msg;
@@ -707,8 +690,10 @@ function passStations(){
  }
 }
 
-function tick(now){
- const dt=Math.min((now-lastFrame)/1000,.1);lastFrame=now;
+function tick(){
+ const now = Date.now();
+ const dt = Math.min((now - lastFrame)/1000, 0.1);
+ lastFrame = now;
  syncClock();updateOtherTrains();
  const limit=330;targetSpeed=calculateTargetSpeed();
  let acceleration=0;
@@ -735,24 +720,23 @@ function tick(now){
  if(distance>=LEN&&direction===1&&!arrived){distance=LEN;speed=0;power=0;notchLabel="N";arrived=true;log(activeRoute.endName+" 도착")}
  if(distance<=0&&direction===-1){distance=0;speed=0}
 
- const since=performance.now()-vigilanceLast;
+ const since=now-vigilanceLast;
  if(since>55000&&warningStart===null){
-  warningStart=performance.now();
+  warningStart=now;
   startWarningSound();
   log("경계장치 경고");
  }
- if(warningStart!==null&&performance.now()-warningStart>15000&&!emergency){
+ if(warningStart!==null&&now-warningStart>15000&&!emergency){
   applyEmergency();
   log("경계장치 응답 없음 · 비상제동");
  }
 
  passStations();render();updateTimetable();updateOtherTable();updateTrack();
- requestAnimationFrame(tick);
 }
 
 function pedalPress(){
  initAudio();
- vigilanceLast=performance.now();
+ vigilanceLast=Date.now();
  warningStart=null;
  stopWarningSound();
  $("pedalTime").textContent="최근 입력: "+deviceTimeText();
@@ -831,9 +815,13 @@ document.addEventListener("keydown",e=>{
 document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
+document.addEventListener("click", initAudio, {once: true});
+document.addEventListener("touchstart", initAudio, {once: true});
+
 changeRoute("gyeongbu");
-log("오프라인 시뮬레이터 시작 · HTML 리더 최적화 완료");
-requestAnimationFrame(tick);
+log("HTML 리더 호환 시뮬레이터 시작 완료");
+
+setInterval(tick, 1000/60);
 </script>
 </body>
 </html>
