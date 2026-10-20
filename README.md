@@ -55,7 +55,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <header>
 <div>
 <h1>ERR · Eco Rapid Rail</h1>
-<p id="headerSub">노선 선택 및 기기 시각 연동 시뮬레이터</p>
+<p id="headerSub">오프라인 · HTML 리더 최적화 시뮬레이터</p>
 </div>
 <div class="row">
 <button id="saveGame" class="active">💾 게임 저장</button>
@@ -166,12 +166,14 @@ const DAY=86400;
 
 let audioCtx = null;
 function initAudio() {
- if (!audioCtx) {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
- }
- if (audioCtx.state === 'suspended') {
-  audioCtx.resume();
- }
+ try {
+  if (!audioCtx) {
+   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+   audioCtx.resume();
+  }
+ } catch(e) {}
 }
 
 const routes = {
@@ -297,37 +299,27 @@ let warningSoundInterval = null;
 
 function saveGameData(){
  const data = {
-  currentRouteKey,
-  speed,
-  distance,
-  direction,
-  power,
-  vcb,
-  pantograph,
-  emergency,
-  leftDoor,
-  rightDoor,
-  allowL,
-  allowR,
-  turnout,
-  stationIndex,
-  arrived,
-  overtakeMode,
-  targetGap,
-  notchLabel
+  currentRouteKey, speed, distance, direction, power,
+  vcb, pantograph, emergency, leftDoor, rightDoor,
+  allowL, allowR, turnout, stationIndex, arrived,
+  overtakeMode, targetGap, notchLabel
  };
- localStorage.setItem("err_save_data", JSON.stringify(data));
- log("게임이 성공적으로 저장되었습니다.");
- alert("게임 상태가 저장되었습니다!");
+ try {
+  localStorage.setItem("err_save_data", JSON.stringify(data));
+  log("게임이 성공적으로 저장되었습니다.");
+  alert("게임 상태가 저장되었습니다!");
+ } catch(e){
+  alert("로컬 환경 제한으로 저장 공간을 사용할 수 없습니다.");
+ }
 }
 
 function loadGameData(){
- const saved = localStorage.getItem("err_save_data");
- if(!saved){
-  alert("저장된 게임 데이터가 없습니다.");
-  return;
- }
  try {
+  const saved = localStorage.getItem("err_save_data");
+  if(!saved){
+   alert("저장된 게임 데이터가 없습니다.");
+   return;
+  }
   const data = JSON.parse(saved);
   currentRouteKey = data.currentRouteKey;
   activeRoute = routes[currentRouteKey];
@@ -353,7 +345,7 @@ function loadGameData(){
   targetGap = data.targetGap;
   notchLabel = data.notchLabel;
 
-  $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · 기기 시각 연동 시뮬레이터";
+  $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · 오프라인 시뮬레이터";
   document.querySelector("#trackTerminals").innerHTML = `<span class="muted">${activeRoute.startName} 0 km</span><span class="muted">${activeRoute.endName} ${LEN} km</span>`;
   $("gapInput").value = targetGap;
   
@@ -383,7 +375,7 @@ function changeRoute(key){
   if(stations[i].km <= distance) stationIndex = i;
  }
  
- $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · 기기 시각 연동 시뮬레이터";
+ $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · 오프라인 시뮬레이터";
  document.querySelector("#trackTerminals").innerHTML = `<span class="muted">${activeRoute.startName} 0 km</span><span class="muted">${activeRoute.endName} ${LEN} km</span>`;
  
  initTrains();
@@ -840,7 +832,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 저장 및 불러오기 기능 추가 완료");
+log("오프라인 시뮬레이터 시작 · HTML 리더 최적화 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
