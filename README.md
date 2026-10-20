@@ -57,7 +57,10 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <h1>ERR · Eco Rapid Rail</h1>
 <p id="headerSub">노선 선택 및 기기 시각 연동 시뮬레이터</p>
 </div>
-<div class="route-selector">
+<div class="row">
+<button id="saveGame" class="active">💾 게임 저장</button>
+<button id="loadGame">📂 저장 불러오기</button>
+<div class="route-selector" style="margin-left:10px;">
 <label for="routeSelect" style="margin:0;font-weight:bold;">운행 노선:</label>
 <select id="routeSelect">
 <option value="gyeongbu">경부선 (서울 ~ 부산센텀)</option>
@@ -66,6 +69,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <option value="gyeongjeon">경전선 (서울 ~ 진주)</option>
 <option value="donghae">동해선 (서울 ~ 포항)</option>
 </select>
+</div>
 </div>
 </header>
 <main>
@@ -290,6 +294,80 @@ let lastFrame=performance.now(),vigilanceLast=performance.now(),warningStart=nul
 let overtakeMode=false,targetGap=2,targetSpeed=330,notchLabel="N";
 const trains=[],heldKeys=new Set();
 let warningSoundInterval = null;
+
+function saveGameData(){
+ const data = {
+  currentRouteKey,
+  speed,
+  distance,
+  direction,
+  power,
+  vcb,
+  pantograph,
+  emergency,
+  leftDoor,
+  rightDoor,
+  allowL,
+  allowR,
+  turnout,
+  stationIndex,
+  arrived,
+  overtakeMode,
+  targetGap,
+  notchLabel
+ };
+ localStorage.setItem("err_save_data", JSON.stringify(data));
+ log("게임이 성공적으로 저장되었습니다.");
+ alert("게임 상태가 저장되었습니다!");
+}
+
+function loadGameData(){
+ const saved = localStorage.getItem("err_save_data");
+ if(!saved){
+  alert("저장된 게임 데이터가 없습니다.");
+  return;
+ }
+ try {
+  const data = JSON.parse(saved);
+  currentRouteKey = data.currentRouteKey;
+  activeRoute = routes[currentRouteKey];
+  LEN = activeRoute.len;
+  stations = activeRoute.stations;
+  $("routeSelect").value = currentRouteKey;
+  
+  speed = data.speed;
+  distance = data.distance;
+  direction = data.direction;
+  power = data.power;
+  vcb = data.vcb;
+  pantograph = data.pantograph;
+  emergency = data.emergency;
+  leftDoor = data.leftDoor;
+  rightDoor = data.rightDoor;
+  allowL = data.allowL;
+  allowR = data.allowR;
+  turnout = data.turnout;
+  stationIndex = data.stationIndex;
+  arrived = data.arrived;
+  overtakeMode = data.overtakeMode;
+  targetGap = data.targetGap;
+  notchLabel = data.notchLabel;
+
+  $("headerSub").textContent = activeRoute.name + " (" + activeRoute.startName + " ~ " + activeRoute.endName + ") · 기기 시각 연동 시뮬레이터";
+  document.querySelector("#trackTerminals").innerHTML = `<span class="muted">${activeRoute.startName} 0 km</span><span class="muted">${activeRoute.endName} ${LEN} km</span>`;
+  $("gapInput").value = targetGap;
+  
+  initTrains();
+  updateTimetable();
+  updateOtherTable();
+  updateTrack();
+  render();
+  log("저장된 게임을 불러왔습니다.");
+  alert("게임을 성공적으로 불러왔습니다!");
+ } catch(e){
+  alert("저장된 데이터를 불러오는 중 오류가 발생했습니다.");
+ }
+}
 
 function changeRoute(key){
  currentRouteKey = key;
@@ -716,6 +794,9 @@ $("routeSelect").addEventListener("change", (e)=>{
  changeRoute(e.target.value);
 });
 
+$("saveGame").addEventListener("click", saveGameData);
+$("loadGame").addEventListener("click", loadGameData);
+
 $("forward").addEventListener("click",()=>setDirection(1));
 $("reverse").addEventListener("click",()=>setDirection(-1));
 $("vcbButton").addEventListener("click",toggleVCB);
@@ -759,7 +840,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 오디오 컨텍스트 자동 활성화 적용 완료");
+log("시뮬레이터 시작 · 저장 및 불러오기 기능 추가 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
