@@ -824,7 +824,7 @@ document.addEventListener("keydown",e=>{
  initAudio();
  if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName))return;
  if(e.code==="Space"){e.preventDefault();if(!heldKeys.has("Space"))pedalPress();heldKeys.add("Space");return}
- if(e.code==="ArrowUp"||e.code==="ArrowDown"){e.preventDefault(); e.stopPropagation();}
+ if(e.code==="ArrowUp"||e.code==="ArrowDown"){e.preventDefault();}
  if(heldKeys.has(e.code))return;heldKeys.add(e.code);
  const k=e.key.toLowerCase();
  if(k==="f")setDirection(1);else if(k==="r")setDirection(-1);
@@ -833,14 +833,14 @@ document.addEventListener("keydown",e=>{
  else if(k==="w")toggleDoor("L");else if(k==="e")toggleDoor("R");
  else if(k==="a")togglePermission("L");else if(k==="d")togglePermission("R");
  else if(k==="4")setTurnout("좌측");else if(k==="5")setTurnout("직진");else if(k==="6")setTurnout("우측");
- else if(e.key==="ArrowUp"){ notchUp(); }
- else if(e.key==="ArrowDown"){ notchDown(); }
+ else if(e.key==="ArrowUp") notchUp();
+ else if(e.key==="ArrowDown") notchDown();
 });
 document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 키보드 상하방향키 스크롤 방지 적용 완료");
+log("시뮬레이터 시작 · 저장 및 불러오기 기능 추가 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
