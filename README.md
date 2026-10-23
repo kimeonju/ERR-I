@@ -55,24 +55,25 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <header>
 <div>
 <h1>ERR · Eco Rapid Rail</h1>
-<p id="headerSub">노선 선택 및 기기 시각 연동 시뮬레이터</p>
+<p id="headerSub">경부선 (서울 ~ 부산센텀) · 기기 시각 연동 시뮬레이터</p>
 </div>
 <div class="row">
 <div class="route-selector">
 <label for="trainTypeSelect" style="margin:0;font-weight:bold;">차종:</label>
 <select id="trainTypeSelect">
 <option value="ERR" data-speed="330" selected>ERR</option>
-<option value="새마을호 II" data-speed="150">새마을호 II</option>
-<option value="무궁화호 II" data-speed="150">무궁화호 II</option>
-<option value="통일호 II" data-speed="120">통일호 II</option>
+<option value="새마을호 II" data-speed="220">새마을호 II</option>
+<option value="무궁화호 II" data-speed="197">무궁화호 II</option>
+<option value="통일호 II" data-speed="180">통일호 II</option>
 <option value="KTX" data-speed="300">KTX</option>
-<option value="KTX-산천" data-speed="300">KTX-산천</option>
-<option value="ITX-새마을" data-speed="150">ITX-새마을</option>
-<option value="ITX-마음" data-speed="150">ITX-마음</option>
-<option value="새마을호" data-speed="150">새마을호</option>
+<option value="KTX-산천" data-speed="305">KTX-산천</option>
+<option value="ITX-새마을" data-speed="180">ITX-새마을</option>
+<option value="ITX-마음" data-speed="160">ITX-마음</option>
+<option value="새마을호" data-speed="170">새마을호</option>
 <option value="ITX-청춘" data-speed="180">ITX-청춘</option>
 <option value="무궁화호" data-speed="150">무궁화호</option>
 <option value="누리로" data-speed="150">누리로</option>
+<option value="GTX" data-speed="180">GTX계열</option>
 <option value="서울광역선" data-speed="110">서울광역선</option>
 <option value="대전광역선" data-speed="110">대전광역선</option>
 <option value="대구광역선" data-speed="110">대구광역선</option>
@@ -104,20 +105,28 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <div class="row between"><h2 id="cabinTitle">운전실 · ERR 001</h2><span id="clock" class="badge">--:--:--</span></div>
 <div class="g2">
 <div class="stat"><small>현재 속도</small><span id="speed" class="big">0</span> km/h<div class="progress"><span id="speedbar"></span></div></div>
-<div class="stat"><small>현재 위치</small><strong id="station">서울</strong><div id="distance" class="muted">0.0 km</div>다음 역: <strong id="next">광명</strong></div>
+<div class="stat"><small>현재 위치</small><strong id="station">서울</strong><div id="distance" class="muted">0.0 km</div>다음 역: <strong id="next">영등포</strong></div>
 </div>
 <div class="g3" style="margin-top:8px">
 <div class="stat"><small>노치</small><strong id="notch">N</strong></div>
-<div class="stat"><small>열차 제한속도</small><strong id="limit">330 km/h</strong></div>
+<div class="stat"><small>현재 구간 제한속도</small><strong id="limit">330 km/h</strong></div>
 <div class="stat"><small>목표속도</small><strong id="targetSpeed">330 km/h</strong></div>
-<div class="stat"><small>VCB</small><strong id="vcb">OFF</strong></div>
-<div class="stat"><small>팬터그래프</small><strong id="pant">하강</strong></div>
+<div class="stat"><small id="powerSysLabel1">VCB</small><strong id="vcb">OFF</strong></div>
+<div class="stat"><small id="powerSysLabel2">팬터그래프</small><strong id="pant">하강</strong></div>
+<div class="stat" id="thirdSysBox" style="display:none;"><small id="powerSysLabel3">디젤엔진</small><strong id="diesel">OFF</strong></div>
 <div class="stat"><small>상태</small><strong id="status">정차</strong></div>
 </div>
+
+<div id="propaneInfoBox" class="stat" style="display:none; margin-top:8px;">
+ <small>110MW 3대 배터리 환원 시스템 · 프로판 가스 잔여 운행 가능 시간</small>
+ <strong id="propaneTime" style="color:var(--green)">20시간 00분 00초 (100.0%)</strong>
+</div>
+
 <h3>운전 제어</h3>
 <div class="row">
 <button id="forward">F · 전진</button><button id="reverse">R · 후진</button>
 <button id="vcbButton">O · VCB</button><button id="pantButton">P · 팬터그래프</button>
+<button id="dieselButton" style="display:none;">I · 디젤엔진</button>
 <button id="coast">C · 타행</button><button id="eb" class="danger">비상제동</button><button id="release">제동 해제</button>
 </div>
 <h3>역행 / 제동 노치</h3>
@@ -125,7 +134,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <button data-notch="P1">P1</button><button data-notch="P2">P2</button><button data-notch="P3">P3</button><button data-notch="P4">P4</button><button data-notch="P5">P5</button><button data-notch="N">N</button>
 <button data-notch="B1">B1</button><button data-notch="B2">B2</button><button data-notch="B3">B3</button><button data-notch="B4">B4</button><button data-notch="B5">B5</button>
 </div>
-<p class="muted">P5: +1.8 km/h/s · B5: −1.8 km/h/s · Space: 경계 페달 · T: 추월 모드</p>
+<p class="muted" id="controlKeyGuide">P5: +1.8 km/h/s · B5: −1.8 km/h/s · Space: 경계 페달 · T: 추월 모드</p>
 </section>
 
 <section class="panel s4">
@@ -146,7 +155,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 
 <section class="panel s12">
 <h2>노선 및 열차 위치</h2><div class="track" id="track"><div class="rail"></div><div id="trackMarks"></div></div>
-<div class="row between" id="trackTerminals"><span class="muted">서울 0 km</span><span class="muted">부산센텀 417.4 km</span></div>
+<div class="row between" id="trackTerminals"><span class="muted">서울 0 km</span><span class="muted">부산센텀 442.2 km</span></div>
 </section>
 
 <section class="panel s6">
@@ -196,6 +205,18 @@ let userTrainNo = "001";
 let userTrainId = "ERR 001";
 let maxLimitSpeed = 330;
 
+// 동력 / 시스템 변수
+let speed=0,distance=0,direction=0,power=0;
+let vcb=false, pantograph=false, dieselEngine=false;
+let propaneSecLeft = 72000; // 20시간 (72,000초)
+
+let emergency=false,leftDoor=false,rightDoor=false,allowL=false,allowR=false;
+let turnout="직진",stationIndex=0,arrived=false;
+let lastFrame=performance.now(),vigilanceLast=performance.now(),warningStart=null;
+let overtakeMode=false,targetGap=2,targetSpeed=330,notchLabel="N";
+const trains=[],heldKeys=new Set();
+let warningSoundInterval = null;
+
 let audioCtx = null;
 function initAudio() {
  if (!audioCtx) {
@@ -211,22 +232,38 @@ const routes = {
   name: "경부선",
   startName: "서울",
   endName: "부산센텀",
-  len: 417.4,
+  len: 442.2,
   startHour: 5,
   startMinute: 0,
   stations: [
    {name:"서울",km:0,limit:330,arr:"",dep:5*3600},
-   {name:"광명",km:17,limit:330,arr:5*3600+20*60,dep:5*3600+23*60},
-   {name:"천안아산",km:96.5,limit:330,arr:5*3600+50*60,dep:5*3600+53*60},
-   {name:"오송",km:131.5,limit:330,arr:6*3600+10*60,dep:6*3600+13*60},
-   {name:"대전",km:166.3,limit:330,arr:6*3600+30*60,dep:6*3600+35*60},
-   {name:"김천(구미)",km:227.3,limit:330,arr:7*3600+0*60,dep:7*3600+3*60},
-   {name:"동대구",km:293.1,limit:330,arr:7*3600+20*60,dep:7*3600+25*60},
-   {name:"경주",km:346.8,limit:330,arr:7*3600+43*60,dep:7*3600+46*60},
-   {name:"태화강",km:380,limit:330,arr:8*3600+0*60,dep:8*3600+3*60},
-   {name:"부산센텀",km:417.4,limit:330,arr:8*3600+23*60,dep:""}
+   {name:"영등포",km:9.1,limit:330,arr:5*3600+8*60,dep:5*3600+10*60},
+   {name:"안양",km:23.9,limit:330,arr:5*3600+20*60,dep:5*3600+22*60},
+   {name:"수원",km:41.5,limit:330,arr:5*3600+34*60,dep:5*3600+37*60},
+   {name:"오산",km:55.0,limit:330,arr:5*3600+47*60,dep:5*3600+49*60},
+   {name:"평택",km:75.0,limit:330,arr:6*3600+2*60,dep:6*3600+4*60},
+   {name:"천안",km:96.6,limit:330,arr:6*3600+18*60,dep:6*3600+21*60},
+   {name:"대전",km:166.3,limit:330,arr:7*3600+0*60,dep:7*3600+5*60},
+   {name:"옥천",km:181.4,limit:330,arr:7*3600+16*60,dep:7*3600+18*60},
+   {name:"영동",km:211.6,limit:330,arr:7*3600+38*60,dep:7*3600+40*60},
+   {name:"황간",km:226.2,limit:330,arr:7*3600+50*60,dep:7*3600+52*60},
+   {name:"추풍령",km:234.7,limit:330,arr:7*3600+58*60,dep:8*3600+0*60},
+   {name:"김천",km:253.8,limit:330,arr:8*3600+13*60,dep:8*3600+15*60},
+   {name:"구미",km:276.7,limit:330,arr:8*3600+30*60,dep:8*3600+33*60},
+   {name:"왜관",km:296.7,limit:330,arr:8*3600+47*60,dep:8*3600+49*60},
+   {name:"신동",km:306.3,limit:330,arr:8*3600+55*60,dep:8*3600+57*60},
+   {name:"대구",km:323.1,limit:330,arr:9*3600+9*60,dep:9*3600+11*60},
+   {name:"동대구",km:326.3,limit:330,arr:9*3600+15*60,dep:9*3600+20*60},
+   {name:"하양",km:340.3,limit:330,arr:9*3600+30*60,dep:9*3600+32*60},
+   {name:"영천",km:359.3,limit:330,arr:9*3600+45*60,dep:9*3600+47*60},
+   {name:"아화",km:374.0,limit:330,arr:9*3600+57*60,dep:9*3600+59*60},
+   {name:"경주",km:388.0,limit:270,arr:10*3600+10*60,dep:10*3600+13*60},
+   {name:"북울산",km:409.0,limit:270,arr:10*3600+28*60,dep:10*3600+30*60},
+   {name:"울산시내(태화강)",km:418.7,limit:270,arr:10*3600+38*60,dep:10*3600+41*60},
+   {name:"신해운대",km:435.0,limit:270,arr:10*3600+53*60,dep:10*3600+55*60},
+   {name:"부산센텀",km:442.2,limit:270,arr:11*3600+0*60,dep:""}
   ],
-  majorMarks: [{n:"서울",k:0},{n:"광명",k:17},{n:"대전",k:166.3},{n:"동대구",k:293.1},{n:"부산센텀",k:417.4}]
+  majorMarks: [{n:"서울",k:0},{n:"수원",k:41.5},{n:"대전",k:166.3},{n:"동대구",k:326.3},{n:"경주",k:388.0},{n:"부산센텀",k:442.2}]
  },
  honam: {
   name: "호남선",
@@ -319,16 +356,12 @@ let activeRoute = routes[currentRouteKey];
 let LEN = activeRoute.len;
 let stations = activeRoute.stations;
 
-let speed=0,distance=0,direction=0,power=0,vcb=false,pantograph=false;
-let emergency=false,leftDoor=false,rightDoor=false,allowL=false,allowR=false;
-let turnout="직진",stationIndex=0,arrived=false;
-let lastFrame=performance.now(),vigilanceLast=performance.now(),warningStart=null;
-let overtakeMode=false,targetGap=2,targetSpeed=330,notchLabel="N";
-const trains=[],heldKeys=new Set();
-let warningSoundInterval = null;
-
 function isHighSpeedTrain(type){
  return ["ERR","KTX","KTX-산천"].includes(type);
+}
+
+function isDieselTrain(type){
+ return type === "무궁화호 II";
 }
 
 function updateTrainTypeAndNo(){
@@ -360,6 +393,29 @@ function updateTrainTypeAndNo(){
  userTrainId = userTrainType + " " + userTrainNo;
  $("cabinTitle").textContent = "운전실 · " + userTrainId;
  $("timetableTitle").textContent = "시간표 · " + userTrainId;
+
+ if(isDieselTrain(userTrainType)){
+  $("powerSysLabel1").textContent = "프로판엔진";
+  $("powerSysLabel2").textContent = "환원기";
+  $("thirdSysBox").style.display = "block";
+  $("dieselButton").style.display = "inline-block";
+  $("propaneInfoBox").style.display = "block";
+  
+  $("vcbButton").textContent = "O · 프로판엔진";
+  $("pantButton").textContent = "P · 환원기";
+  $("dieselButton").textContent = "I · 디젤엔진";
+  $("controlKeyGuide").textContent = "P5: +1.8 km/h/s · B5: −1.8 km/h/s · O: 프로판 · P: 환원기 · I: 디젤 · Space: 경계";
+ } else {
+  $("powerSysLabel1").textContent = "VCB";
+  $("powerSysLabel2").textContent = "팬터그래프";
+  $("thirdSysBox").style.display = "none";
+  $("dieselButton").style.display = "none";
+  $("propaneInfoBox").style.display = "none";
+  
+  $("vcbButton").textContent = "O · VCB";
+  $("pantButton").textContent = "P · 팬터그래프";
+  $("controlKeyGuide").textContent = "P5: +1.8 km/h/s · B5: −1.8 km/h/s · Space: 경계 페달 · T: 추월 모드";
+ }
 }
 
 function saveGameData(){
@@ -376,6 +432,8 @@ function saveGameData(){
   power,
   vcb,
   pantograph,
+  dieselEngine,
+  propaneSecLeft,
   emergency,
   leftDoor,
   rightDoor,
@@ -419,6 +477,8 @@ function loadGameData(){
   power = data.power;
   vcb = data.vcb;
   pantograph = data.pantograph;
+  dieselEngine = data.dieselEngine || false;
+  propaneSecLeft = data.propaneSecLeft !== undefined ? data.propaneSecLeft : 72000;
   emergency = data.emergency;
   leftDoor = data.leftDoor;
   rightDoor = data.rightDoor;
@@ -527,19 +587,40 @@ function log(msg){
  $("log").prepend(el);
  while($("log").children.length>100)$("log").lastChild.remove();
 }
-function currentLimit(){return maxLimitSpeed;}
+
+function getSectionSpeedLimit(){
+ let routeLimit = maxLimitSpeed;
+ if(currentRouteKey === "gyeongbu" && distance >= 388.0){
+  routeLimit = Math.min(routeLimit, 270);
+ }
+ return routeLimit;
+}
+
+function currentLimit(){return getSectionSpeedLimit();}
+
 function currentStationName(){
  let result=stations[0].name;
  for(const s of stations)if(s.km<=distance+.02)result=s.name;
  return result;
 }
 function nextStationIndex(){return stations.findIndex(s=>s.km>distance+.02)}
+
+function checkPowerReady(){
+ if(isDieselTrain(userTrainType)){
+  return vcb && pantograph && dieselEngine && propaneSecLeft > 0;
+ }
+ return vcb && pantograph;
+}
+
 function setNotch(v){
  initAudio();
  if(emergency&&!v.startsWith("B")&&v!=="N")return;
  if(/^P[1-5]$/.test(v)){
-  if(!vcb||!pantograph||direction===0){
-   power=0;notchLabel="N";log("역행 불가: 방향·VCB·팬터그래프 확인");render();return;
+  if(!checkPowerReady()||direction===0){
+   power=0;notchLabel="N";
+   let msg = isDieselTrain(userTrainType) ? "역행 불가: 방향·프로판엔진(O)·환원기(P)·디젤엔진(I) 및 가스 잔량 확인" : "역행 불가: 방향·VCB·팬터그래프 확인";
+   log(msg);
+   render();return;
   }
   power=Number(v.slice(1));notchLabel=v;emergency=false;
  }else if(/^B[1-5]$/.test(v)){
@@ -547,11 +628,13 @@ function setNotch(v){
  }else{power=0;notchLabel="N";}
  render();
 }
+
 function setDirection(d){
  initAudio();
  if(speed>.1){log("정차 후 방향 변경 필요");return}
  direction=d;log(d===1?"전진 설정":"후진 설정");render();
 }
+
 function applyEmergency(){
  initAudio();
  emergency=true;power=-5;notchLabel="EB";
@@ -559,12 +642,38 @@ function applyEmergency(){
  log("비상제동 작동");
  render();
 }
+
 function releaseBrake(){
  initAudio();
  emergency=false;power=0;notchLabel="N";log("비상제동 해제");render();
 }
-function toggleVCB(){initAudio();vcb=!vcb;if(!vcb){power=0;notchLabel="N"}log("VCB "+(vcb?"ON":"OFF"));render()}
-function togglePantograph(){initAudio();pantograph=!pantograph;if(!pantograph){power=0;notchLabel="N"}log("팬터그래프 "+(pantograph?"올림":"내림"));render()}
+
+function toggleVCB(){
+ initAudio();
+ vcb=!vcb;
+ if(!vcb){power=0;notchLabel="N"}
+ let msg = isDieselTrain(userTrainType) ? ("프로판엔진 " + (vcb ? "ON" : "OFF")) : ("VCB " + (vcb ? "ON" : "OFF"));
+ log(msg);
+ render();
+}
+
+function togglePantograph(){
+ initAudio();
+ pantograph=!pantograph;
+ if(!pantograph){power=0;notchLabel="N"}
+ let msg = isDieselTrain(userTrainType) ? ("환원기 " + (pantograph ? "ON" : "OFF")) : ("팬터그래프 " + (pantograph ? "상승" : "내림"));
+ log(msg);
+ render();
+}
+
+function toggleDiesel(){
+ initAudio();
+ dieselEngine=!dieselEngine;
+ if(!dieselEngine){power=0;notchLabel="N"}
+ log("디젤엔진 " + (dieselEngine ? "ON" : "OFF"));
+ render();
+}
+
 function setTurnout(v){initAudio();turnout=v;render();log("진로 설정: "+v)}
 function togglePermission(side){
  initAudio();
@@ -613,7 +722,8 @@ function getTrainState(t, nowSec){
   let stopTime = (i===0)?0:(isLongStop?300:180);
   
   let a=1.0; 
-  let vPeak=Math.min(300, Math.sqrt(dist * a * 3600));
+  let maxSpd = (currentRouteKey === "gyeongbu" && startKm >= 388.0) ? 270 : 300;
+  let vPeak=Math.min(maxSpd, Math.sqrt(dist * a * 3600));
   
   let accelTime=vPeak / a;
   let accelDist=0.5 * a * (accelTime * accelTime) / 3600;
@@ -667,8 +777,9 @@ function getAheadAhead(){
  const front=ahead[1]||ahead[0]||null;
  return {base,front,gap:front?front.km-distance:null};
 }
+
 function calculateTargetSpeed(){
- const limit=maxLimitSpeed;
+ const limit=getSectionSpeedLimit();
  if(!overtakeMode){
   $("autoExplanation").textContent="추월 모드 OFF · 수동 운전";
   $("autoLimit").textContent=limit+" km/h";return limit;
@@ -736,6 +847,7 @@ function updateOtherTable(){
    st.active?((st.km-distance>=0?"+":"")+(st.km-distance).toFixed(1)+" km"):"-"];
   vals.forEach(v=>{const td=document.createElement("td");td.textContent=v;row.appendChild(td)});
   body.appendChild(row);
+ chip;
  }
 }
 
@@ -756,12 +868,28 @@ function updateTrack(){
 
 function render(){
  updateTrainTypeAndNo();
- $("speed").textContent=Math.round(speed);$("speedbar").style.width=Math.min(100,speed/maxLimitSpeed*100)+"%";
+ const secLimit = getSectionSpeedLimit();
+ $("speed").textContent=Math.round(speed);$("speedbar").style.width=Math.min(100,speed/secLimit*100)+"%";
  $("distance").textContent=distance.toFixed(1)+" km";$("station").textContent=currentStationName();
  const ni=nextStationIndex();$("next").textContent=ni<0?"종착역":stations[ni].name;
- $("notch").textContent=notchLabel;$("limit").textContent=maxLimitSpeed + " km/h";
+ $("notch").textContent=notchLabel;$("limit").textContent=secLimit + " km/h";
  $("targetSpeed").textContent=Math.round(targetSpeed)+" km/h";
- $("vcb").textContent=vcb?"ON":"OFF";$("pant").textContent=pantograph?"상승":"하강";
+ 
+ if(isDieselTrain(userTrainType)){
+  $("vcb").textContent=vcb?"ON":"OFF";
+  $("pant").textContent=pantograph?"ON":"OFF";
+  $("diesel").textContent=dieselEngine?"ON":"OFF";
+  
+  let h = Math.floor(propaneSecLeft / 3600);
+  let m = Math.floor((propaneSecLeft % 3600) / 60);
+  let s = Math.floor(propaneSecLeft % 60);
+  let pct = (propaneSecLeft / 72000 * 100).toFixed(1);
+  $("propaneTime").textContent = `${h}시간 ${String(m).padStart(2,'0')}분 ${String(s).padStart(2,'0')}초 (${pct}%)`;
+ } else {
+  $("vcb").textContent=vcb?"ON":"OFF";
+  $("pant").textContent=pantograph?"상승":"하강";
+ }
+
  $("status").textContent=arrived?"운행 완료":emergency?"비상제동":speed>.1?"주행":"정차";
  $("turnout").textContent=turnout;
  $("leftStatus").textContent=(leftDoor?"열림":"닫힘")+" · "+(allowL?"허가":"허가 없음");
@@ -770,7 +898,7 @@ function render(){
  $("turnL").classList.toggle("active",turnout==="좌측");$("turnS").classList.toggle("active",turnout==="직진");$("turnR").classList.toggle("active",turnout==="우측");
  $("overtake").textContent="추월 모드 "+(overtakeMode?"ON":"OFF");$("overtake").classList.toggle("active",overtakeMode);
  $("gapSetting").textContent=targetGap.toFixed(1)+" km";$("emergencyStatus").textContent=emergency?"작동":"해제";
- const over=speed>maxLimitSpeed+1;$("overspeed").textContent=over?"초과":"정상";$("overspeed").className=over?"bad":"good";
+ const over=speed>secLimit+1;$("overspeed").textContent=over?"초과":"정상";$("overspeed").className=over?"bad":"good";
  $("speedWarning").textContent="정상";$("speedWarning").className="good";
  $("vigilance").textContent=warningStart!==null?"경고":"정상";$("vigilance").className=warningStart!==null?"bad":"good";
  const info=getAheadAhead();
@@ -797,11 +925,21 @@ function passStations(){
 function tick(now){
  const dt=Math.min((now-lastFrame)/1000,.1);lastFrame=now;
  syncClock();updateOtherTrains();
- const limit=maxLimitSpeed;targetSpeed=calculateTargetSpeed();
+ const limit=getSectionSpeedLimit();targetSpeed=calculateTargetSpeed();
+ 
+ if(isDieselTrain(userTrainType) && (vcb || dieselEngine)){
+  propaneSecLeft = Math.max(0, propaneSecLeft - dt);
+  if(propaneSecLeft === 0){
+   power = 0; notchLabel = "N";
+   vcb = false; dieselEngine = false;
+   log("프로판 가스 소진 · 엔진 정지");
+  }
+ }
+
  let acceleration=0;
  if(emergency)acceleration=-5;
  else if(power>0){
-  if(vcb&&pantograph&&direction!==0)acceleration=power*0.36; 
+  if(checkPowerReady()&&direction!==0)acceleration=power*0.36; 
   else{power=0;notchLabel="N"}
  }else if(power<0)acceleration=power*0.36;
 
@@ -816,7 +954,7 @@ function tick(now){
   }
   if(speed>targetSpeed+1)acceleration=Math.min(acceleration,-1.8);
  }
- speed=Math.max(0,Math.min(maxLimitSpeed,speed+acceleration*dt));
+ speed=Math.max(0,Math.min(limit,speed+acceleration*dt));
  if(speed>limit){speed=Math.max(limit,speed-1.8*dt);if(speed>limit+5&&!emergency)applyEmergency()}
  if(speed>.05&&direction!==0&&!arrived){distance+=direction*speed/3600*dt;distance=Math.max(0,Math.min(LEN,distance))}
  if(distance>=LEN&&direction===1&&!arrived){distance=LEN;speed=0;power=0;notchLabel="N";arrived=true;log(activeRoute.endName+" 도착")}
@@ -895,6 +1033,7 @@ $("forward").addEventListener("click",()=>setDirection(1));
 $("reverse").addEventListener("click",()=>setDirection(-1));
 $("vcbButton").addEventListener("click",toggleVCB);
 $("pantButton").addEventListener("click",togglePantograph);
+$("dieselButton").addEventListener("click",toggleDiesel);
 $("coast").addEventListener("click",()=>setNotch("N"));
 $("eb").addEventListener("click",applyEmergency);$("release").addEventListener("click",releaseBrake);
 $("turnL").addEventListener("click",()=>setTurnout("좌측"));
@@ -923,6 +1062,7 @@ document.addEventListener("keydown",e=>{
  const k=e.key.toLowerCase();
  if(k==="f")setDirection(1);else if(k==="r")setDirection(-1);
  else if(k==="o")toggleVCB();else if(k==="p")togglePantograph();
+ else if(k==="i"&&isDieselTrain(userTrainType))toggleDiesel();
  else if(k==="c")setNotch("N");else if(k==="t")toggleOvertake();
  else if(k==="w")toggleDoor("L");else if(k==="e")toggleDoor("R");
  else if(k==="a")togglePermission("L");else if(k==="d")togglePermission("R");
@@ -934,7 +1074,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 지정된 차종 순서 재배치 완료");
+log("시뮬레이터 시작 · O(프로판엔진), P(환원기), I(디젤엔진) 구동 제어 반영 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
