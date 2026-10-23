@@ -62,23 +62,23 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <label for="trainTypeSelect" style="margin:0;font-weight:bold;">차종:</label>
 <select id="trainTypeSelect">
 <option value="ERR" data-speed="330" selected>ERR</option>
+<option value="새마을호 II" data-speed="150">새마을호 II</option>
+<option value="무궁화호 II" data-speed="150">무궁화호 II</option>
+<option value="통일호 II" data-speed="120">통일호 II</option>
 <option value="KTX" data-speed="300">KTX</option>
 <option value="KTX-산천" data-speed="300">KTX-산천</option>
 <option value="ITX-새마을" data-speed="150">ITX-새마을</option>
 <option value="ITX-마음" data-speed="150">ITX-마음</option>
 <option value="새마을호" data-speed="150">새마을호</option>
-<option value="새마을호 II" data-speed="150">새마을호 II</option>
+<option value="ITX-청춘" data-speed="180">ITX-청춘</option>
 <option value="무궁화호" data-speed="150">무궁화호</option>
-<option value="무궁화호 II" data-speed="150">무궁화호 II</option>
 <option value="누리로" data-speed="150">누리로</option>
-<option value="통일호 II" data-speed="120">통일호 II</option>
 <option value="서울광역선" data-speed="110">서울광역선</option>
 <option value="대전광역선" data-speed="110">대전광역선</option>
 <option value="대구광역선" data-speed="110">대구광역선</option>
 <option value="부산광역선" data-speed="110">부산광역선</option>
 <option value="광주광역선" data-speed="110">광주광역선</option>
 <option value="양양속초강릉권역광역선" data-speed="110">양양속초강릉권역광역선</option>
-<option value="ITX-청춘" data-speed="180">ITX-청춘</option>
 <option value="CUSTOM">직접 입력...</option>
 </select>
 <input id="customTrainType" type="text" placeholder="차종 입력" style="width:100px; display:none;">
@@ -934,7 +934,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 다양한 차종 선택 및 번호 규칙 적용 완료");
+log("시뮬레이터 시작 · 지정된 차종 순서 재배치 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
