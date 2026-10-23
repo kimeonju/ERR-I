@@ -10,7 +10,7 @@
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,sans-serif}
 header{padding:18px 20px;background:#111b29;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 header h1{font-size:23px;margin:0}header p{color:var(--muted);margin:5px 0 0}
-.route-selector{display:flex;align-items:center;gap:8px}
+.route-selector{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 main{max-width:1450px;margin:auto;padding:14px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
 .s12{grid-column:span 12}.s8{grid-column:span 8}.s6{grid-column:span 6}.s4{grid-column:span 4}
@@ -59,13 +59,36 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </div>
 <div class="row">
 <div class="route-selector">
-<label for="trainIdInput" style="margin:0;font-weight:bold;">편성번호:</label>
-<input id="trainIdInput" type="text" value="ERR 001" style="width:110px;">
+<label for="trainTypeSelect" style="margin:0;font-weight:bold;">차종:</label>
+<select id="trainTypeSelect">
+<option value="ERR" data-speed="330" selected>ERR</option>
+<option value="KTX" data-speed="300">KTX</option>
+<option value="KTX-산천" data-speed="300">KTX-산천</option>
+<option value="ITX-새마을" data-speed="150">ITX-새마을</option>
+<option value="ITX-마음" data-speed="150">ITX-마음</option>
+<option value="새마을호" data-speed="150">새마을호</option>
+<option value="새마을호 II" data-speed="150">새마을호 II</option>
+<option value="무궁화호" data-speed="150">무궁화호</option>
+<option value="무궁화호 II" data-speed="150">무궁화호 II</option>
+<option value="누리로" data-speed="150">누리로</option>
+<option value="통일호 II" data-speed="120">통일호 II</option>
+<option value="서울광역선" data-speed="110">서울광역선</option>
+<option value="대전광역선" data-speed="110">대전광역선</option>
+<option value="대구광역선" data-speed="110">대구광역선</option>
+<option value="부산광역선" data-speed="110">부산광역선</option>
+<option value="광주광역선" data-speed="110">광주광역선</option>
+<option value="양양속초강릉권역광역선" data-speed="110">양양속초강릉권역광역선</option>
+<option value="ITX-청춘" data-speed="180">ITX-청춘</option>
+<option value="CUSTOM">직접 입력...</option>
+</select>
+<input id="customTrainType" type="text" placeholder="차종 입력" style="width:100px; display:none;">
+<label for="trainNoInput" style="margin:0;font-weight:bold;">번호:</label>
+<input id="trainNoInput" type="text" value="001" style="width:65px;">
 </div>
 <button id="saveGame" class="active">💾 게임 저장</button>
 <button id="loadGame">📂 저장 불러오기</button>
-<div class="route-selector" style="margin-left:10px;">
-<label for="routeSelect" style="margin:0;font-weight:bold;">운행 노선:</label>
+<div class="route-selector" style="margin-left:5px;">
+<label for="routeSelect" style="margin:0;font-weight:bold;">노선:</label>
 <select id="routeSelect">
 <option value="gyeongbu">경부선 (서울 ~ 부산센텀)</option>
 <option value="honam">호남선 (서울 ~ 목포)</option>
@@ -85,7 +108,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </div>
 <div class="g3" style="margin-top:8px">
 <div class="stat"><small>노치</small><strong id="notch">N</strong></div>
-<div class="stat"><small>선로 제한속도</small><strong id="limit">330 km/h</strong></div>
+<div class="stat"><small>열차 제한속도</small><strong id="limit">330 km/h</strong></div>
 <div class="stat"><small>목표속도</small><strong id="targetSpeed">330 km/h</strong></div>
 <div class="stat"><small>VCB</small><strong id="vcb">OFF</strong></div>
 <div class="stat"><small>팬터그래프</small><strong id="pant">하강</strong></div>
@@ -168,7 +191,10 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 const $=id=>document.getElementById(id);
 const DAY=86400;
 
+let userTrainType = "ERR";
+let userTrainNo = "001";
 let userTrainId = "ERR 001";
+let maxLimitSpeed = 330;
 
 let audioCtx = null;
 function initAudio() {
@@ -301,15 +327,47 @@ let overtakeMode=false,targetGap=2,targetSpeed=330,notchLabel="N";
 const trains=[],heldKeys=new Set();
 let warningSoundInterval = null;
 
-function updateTrainTitles(){
- userTrainId = $("trainIdInput").value.trim() || "ERR 001";
+function isHighSpeedTrain(type){
+ return ["ERR","KTX","KTX-산천"].includes(type);
+}
+
+function updateTrainTypeAndNo(){
+ const sel = $("trainTypeSelect");
+ if(sel.value === "CUSTOM"){
+  $("customTrainType").style.display = "inline-block";
+  userTrainType = $("customTrainType").value.trim() || "열차";
+  maxLimitSpeed = 150;
+ } else {
+  $("customTrainType").style.display = "none";
+  userTrainType = sel.value;
+  const opt = sel.options[sel.selectedIndex];
+  maxLimitSpeed = Number(opt.dataset.speed) || 330;
+ }
+
+ userTrainNo = $("trainNoInput").value.trim();
+ if(isHighSpeedTrain(userTrainType)){
+  if(userTrainNo.length === 4 && userTrainNo.startsWith("0")){
+   userTrainNo = userTrainNo.slice(1);
+   $("trainNoInput").value = userTrainNo;
+  }
+ } else {
+  if(userTrainNo.length === 3){
+   userTrainNo = "1" + userTrainNo;
+   $("trainNoInput").value = userTrainNo;
+  }
+ }
+
+ userTrainId = userTrainType + " " + userTrainNo;
  $("cabinTitle").textContent = "운전실 · " + userTrainId;
  $("timetableTitle").textContent = "시간표 · " + userTrainId;
 }
 
 function saveGameData(){
- updateTrainTitles();
+ updateTrainTypeAndNo();
  const data = {
+  userTrainTypeSelect: $("trainTypeSelect").value,
+  customTrainTypeVal: $("customTrainType").value,
+  userTrainNo,
   userTrainId,
   currentRouteKey,
   speed,
@@ -343,9 +401,12 @@ function loadGameData(){
  }
  try {
   const data = JSON.parse(saved);
-  userTrainId = data.userTrainId || "ERR 001";
-  $("trainIdInput").value = userTrainId;
+  $("trainTypeSelect").value = data.userTrainTypeSelect || "ERR";
+  $("customTrainType").value = data.customTrainTypeVal || "";
+  $("trainNoInput").value = data.userTrainNo || "001";
   
+  updateTrainTypeAndNo();
+
   currentRouteKey = data.currentRouteKey;
   activeRoute = routes[currentRouteKey];
   LEN = activeRoute.len;
@@ -374,7 +435,6 @@ function loadGameData(){
   document.querySelector("#trackTerminals").innerHTML = `<span class="muted">${activeRoute.startName} 0 km</span><span class="muted">${activeRoute.endName} ${LEN} km</span>`;
   $("gapInput").value = targetGap;
   
-  updateTrainTitles();
   initTrains();
   updateTimetable();
   updateOtherTable();
@@ -467,7 +527,7 @@ function log(msg){
  $("log").prepend(el);
  while($("log").children.length>100)$("log").lastChild.remove();
 }
-function currentLimit(){return 330;}
+function currentLimit(){return maxLimitSpeed;}
 function currentStationName(){
  let result=stations[0].name;
  for(const s of stations)if(s.km<=distance+.02)result=s.name;
@@ -608,14 +668,14 @@ function getAheadAhead(){
  return {base,front,gap:front?front.km-distance:null};
 }
 function calculateTargetSpeed(){
- const limit=330;
+ const limit=maxLimitSpeed;
  if(!overtakeMode){
   $("autoExplanation").textContent="추월 모드 OFF · 수동 운전";
   $("autoLimit").textContent=limit+" km/h";return limit;
  }
  const info=getAheadAhead();
  if(!info.front){
-  $("autoExplanation").textContent="앞앞차 미검출 · 선로 제한속도 적용";
+  $("autoExplanation").textContent="앞앞차 미검출 · 제한속도 적용";
   $("autoLimit").textContent=limit+" km/h";return limit;
  }
  const g=info.gap;let allowed=limit;
@@ -695,11 +755,11 @@ function updateTrack(){
 }
 
 function render(){
- updateTrainTitles();
- $("speed").textContent=Math.round(speed);$("speedbar").style.width=Math.min(100,speed/330*100)+"%";
+ updateTrainTypeAndNo();
+ $("speed").textContent=Math.round(speed);$("speedbar").style.width=Math.min(100,speed/maxLimitSpeed*100)+"%";
  $("distance").textContent=distance.toFixed(1)+" km";$("station").textContent=currentStationName();
  const ni=nextStationIndex();$("next").textContent=ni<0?"종착역":stations[ni].name;
- $("notch").textContent=notchLabel;$("limit").textContent="330 km/h";
+ $("notch").textContent=notchLabel;$("limit").textContent=maxLimitSpeed + " km/h";
  $("targetSpeed").textContent=Math.round(targetSpeed)+" km/h";
  $("vcb").textContent=vcb?"ON":"OFF";$("pant").textContent=pantograph?"상승":"하강";
  $("status").textContent=arrived?"운행 완료":emergency?"비상제동":speed>.1?"주행":"정차";
@@ -710,7 +770,7 @@ function render(){
  $("turnL").classList.toggle("active",turnout==="좌측");$("turnS").classList.toggle("active",turnout==="직진");$("turnR").classList.toggle("active",turnout==="우측");
  $("overtake").textContent="추월 모드 "+(overtakeMode?"ON":"OFF");$("overtake").classList.toggle("active",overtakeMode);
  $("gapSetting").textContent=targetGap.toFixed(1)+" km";$("emergencyStatus").textContent=emergency?"작동":"해제";
- const over=speed>331;$("overspeed").textContent=over?"초과":"정상";$("overspeed").className=over?"bad":"good";
+ const over=speed>maxLimitSpeed+1;$("overspeed").textContent=over?"초과":"정상";$("overspeed").className=over?"bad":"good";
  $("speedWarning").textContent="정상";$("speedWarning").className="good";
  $("vigilance").textContent=warningStart!==null?"경고":"정상";$("vigilance").className=warningStart!==null?"bad":"good";
  const info=getAheadAhead();
@@ -737,7 +797,7 @@ function passStations(){
 function tick(now){
  const dt=Math.min((now-lastFrame)/1000,.1);lastFrame=now;
  syncClock();updateOtherTrains();
- const limit=330;targetSpeed=calculateTargetSpeed();
+ const limit=maxLimitSpeed;targetSpeed=calculateTargetSpeed();
  let acceleration=0;
  if(emergency)acceleration=-5;
  else if(power>0){
@@ -756,7 +816,7 @@ function tick(now){
   }
   if(speed>targetSpeed+1)acceleration=Math.min(acceleration,-1.8);
  }
- speed=Math.max(0,Math.min(330,speed+acceleration*dt));
+ speed=Math.max(0,Math.min(maxLimitSpeed,speed+acceleration*dt));
  if(speed>limit){speed=Math.max(limit,speed-1.8*dt);if(speed>limit+5&&!emergency)applyEmergency()}
  if(speed>.05&&direction!==0&&!arrived){distance+=direction*speed/3600*dt;distance=Math.max(0,Math.min(LEN,distance))}
  if(distance>=LEN&&direction===1&&!arrived){distance=LEN;speed=0;power=0;notchLabel="N";arrived=true;log(activeRoute.endName+" 도착")}
@@ -813,8 +873,18 @@ $("routeSelect").addEventListener("change", (e)=>{
  changeRoute(e.target.value);
 });
 
-$("trainIdInput").addEventListener("input", ()=>{
- updateTrainTitles();
+$("trainTypeSelect").addEventListener("change", ()=>{
+ updateTrainTypeAndNo();
+ updateTrack();
+});
+
+$("customTrainType").addEventListener("input", ()=>{
+ updateTrainTypeAndNo();
+ updateTrack();
+});
+
+$("trainNoInput").addEventListener("input", ()=>{
+ updateTrainTypeAndNo();
  updateTrack();
 });
 
@@ -864,7 +934,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 편성번호 변경 기능 적용 완료");
+log("시뮬레이터 시작 · 다양한 차종 선택 및 번호 규칙 적용 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
