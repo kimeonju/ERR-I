@@ -74,15 +74,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </header>
 <main>
 <section class="panel s8">
-<div class="row between">
-<h2 id="cabTitle">운전실 · ERR 001</h2>
-<div class="row" style="margin:0;">
-<label for="trainNoInput" style="margin:0;font-weight:bold;">편명: ERR</label>
-<input id="trainNoInput" type="text" maxlength="3" value="001" style="width:55px;text-align:center;font-weight:bold;padding:4px 6px;">
-<button id="setTrainNoBtn" style="padding:4px 8px;">설정</button>
-<span id="clock" class="badge">--:--:--</span>
-</div>
-</div>
+<div class="row between"><h2>운전실 · ERR 001</h2><span id="clock" class="badge">--:--:--</span></div>
 <div class="g2">
 <div class="stat"><small>현재 속도</small><span id="speed" class="big">0</span> km/h<div class="progress"><span id="speedbar"></span></div></div>
 <div class="stat"><small>현재 위치</small><strong id="station">서울</strong><div id="distance" class="muted">0.0 km</div>다음 역: <strong id="next">광명</strong></div>
@@ -154,7 +146,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </section>
 
 <section class="panel s6">
-<h2 id="timetableTitle">시간표 · ERR 001</h2>
+<h2>시간표 · ERR 001</h2>
 <p class="muted">시계는 기기 시각, 색상은 역별 운행 진행 상태를 표시합니다.</p>
 <div class="scroll"><table><thead><tr><th>역</th><th>도착</th><th>출발</th><th>거리</th><th>상태</th></tr></thead><tbody id="timetable"></tbody></table></div>
 </section>
@@ -172,18 +164,12 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 const $=id=>document.getElementById(id);
 const DAY=86400;
 
-let trainNo = "001";
 let audioCtx = null;
-let warningToggle = false;
-
 function initAudio() {
  if (!audioCtx) {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (AudioContextClass) {
-   audioCtx = new AudioContextClass();
-  }
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
  }
- if (audioCtx && audioCtx.state === 'suspended') {
+ if (audioCtx.state === 'suspended') {
   audioCtx.resume();
  }
 }
@@ -309,24 +295,8 @@ let overtakeMode=false,targetGap=2,targetSpeed=330,notchLabel="N";
 const trains=[],heldKeys=new Set();
 let warningSoundInterval = null;
 
-function applyTrainNo(){
- const val = $("trainNoInput").value.replace(/[^0-9]/g, '');
- if(val.length > 0){
-  trainNo = String(val).padStart(3, '0').slice(-3);
- } else {
-  trainNo = "001";
- }
- $("trainNoInput").value = trainNo;
- $("cabTitle").textContent = "운전실 · ERR " + trainNo;
- $("timetableTitle").textContent = "시간표 · ERR " + trainNo;
- log("열차 편명이 ERR " + trainNo + "(으)로 변경되었습니다.");
- render();
- updateTrack();
-}
-
 function saveGameData(){
  const data = {
-  trainNo,
   currentRouteKey,
   speed,
   distance,
@@ -359,11 +329,6 @@ function loadGameData(){
  }
  try {
   const data = JSON.parse(saved);
-  trainNo = data.trainNo || "001";
-  $("trainNoInput").value = trainNo;
-  $("cabTitle").textContent = "운전실 · ERR " + trainNo;
-  $("timetableTitle").textContent = "시간표 · ERR " + trainNo;
-
   currentRouteKey = data.currentRouteKey;
   activeRoute = routes[currentRouteKey];
   LEN = activeRoute.len;
@@ -429,35 +394,32 @@ function changeRoute(key){
  log(activeRoute.name + " 노선으로 변경되었습니다. (속력·위치·상태 유지)");
 }
 
-function playWarningBeep() {
+function playWarningSound() {
  initAudio();
- if (!audioCtx) return;
  try {
+  if (!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type = 'sawtooth';
-  const freq = warningToggle ? 880 : 660;
-  warningToggle = !warningToggle;
-  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
   gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start();
-  osc.stop(audioCtx.currentTime + 0.35);
+  osc.stop(audioCtx.currentTime + 0.4);
  } catch(e) {}
 }
 
 function startWarningSound() {
  if (warningSoundInterval) return;
- playWarningBeep();
+ playWarningSound();
  warningSoundInterval = setInterval(() => {
   if (warningStart !== null && !emergency) {
-   playWarningBeep();
+   playWarningSound();
   } else {
    stopWarningSound();
   }
- }, 450);
+ }, 1000);
 }
 
 function stopWarningSound() {
@@ -704,7 +666,7 @@ function updateTrack(){
  activeRoute.majorMarks.forEach(p=>{
   const l=document.createElement("div");l.className="tracklabel";l.style.left=p.k/LEN*100+"%";l.textContent=p.n;box.appendChild(l);
  });
- const u=document.createElement("div");u.className="mark user";u.style.left=Math.max(0,Math.min(100,distance/LEN*100))+"%";u.title="ERR "+trainNo;box.appendChild(u);
+ const u=document.createElement("div");u.className="mark user";u.style.left=Math.max(0,Math.min(100,distance/LEN*100))+"%";u.title="ERR 001";box.appendChild(u);
  trains.filter(t=>t.km >= 0 && t.km <= LEN).forEach(t=>{
   const m=document.createElement("div");m.className="mark";m.style.left=t.km/LEN*100+"%";m.title=t.id;box.appendChild(m);
  });
@@ -827,14 +789,6 @@ function notchDown(){
  }
 }
 
-$("setTrainNoBtn").addEventListener("click", applyTrainNo);
-$("trainNoInput").addEventListener("keydown", e=>{
- if(e.key === "Enter"){
-  e.preventDefault();
-  applyTrainNo();
- }
-});
-
 $("routeSelect").addEventListener("change", (e)=>{
  initAudio();
  changeRoute(e.target.value);
@@ -886,7 +840,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 열차 편명 변경 기능 및 사운드 보완 완료");
+log("시뮬레이터 시작 · 키보드 상하방향키 스크롤 방지 적용 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
