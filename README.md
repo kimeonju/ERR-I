@@ -741,4 +741,153 @@ function render(){
 
 function passStations(){
  while(stationIndex<stations.length&&distance>=stations[stationIndex].km){
-  if(
+  if(stationIndex===0){stationIndex++;continue}
+  const s=stations[stationIndex];
+  if(stationIndex===stations.length-1){
+   if(distance>=LEN){distance=LEN;speed=0;power=0;notchLabel="N";arrived=true;log(activeRoute.endName+" 도착")}
+   break;
+  }
+  if(overtakeMode){stationIndex++;continue}
+  if(distance>s.km+.2){stationIndex++;continue}
+  break;
+ }
+}
+
+function tick(now){
+ const dt=Math.min((now-lastFrame)/1000,.1);lastFrame=now;
+ syncClock();updateOtherTrains();
+ const limit=330;targetSpeed=calculateTargetSpeed();
+ let acceleration=0;
+ if(emergency)acceleration=-5;
+ else if(power>0){
+  if(vcb&&pantograph&&direction!==0)acceleration=power*0.36; 
+  else{power=0;notchLabel="N"}
+ }else if(power<0)acceleration=power*0.36;
+
+ if(overtakeMode&&!emergency){
+  const info=getAheadAhead();
+  if(info.front&&info.gap!==null){
+   const g=info.gap;
+   if(g<=.2)acceleration=Math.min(acceleration,-1.8);
+   else if(g<targetGap*.5)acceleration=Math.min(acceleration,-1.4);
+   else if(g<targetGap*.75)acceleration=Math.min(acceleration,-.9);
+   else if(g<targetGap)acceleration=Math.min(acceleration,-.36);
+  }
+  if(speed>targetSpeed+1)acceleration=Math.min(acceleration,-1.8);
+ }
+ speed=Math.max(0,Math.min(330,speed+acceleration*dt));
+ if(speed>limit){speed=Math.max(limit,speed-1.8*dt);if(speed>limit+5&&!emergency)applyEmergency()}
+ if(speed>.05&&direction!==0&&!arrived){distance+=direction*speed/3600*dt;distance=Math.max(0,Math.min(LEN,distance))}
+ if(distance>=LEN&&direction===1&&!arrived){distance=LEN;speed=0;power=0;notchLabel="N";arrived=true;log(activeRoute.endName+" 도착")}
+ if(distance<=0&&direction===-1){distance=0;speed=0}
+
+ const since=performance.now()-vigilanceLast;
+ if(since>55000&&warningStart===null){
+  warningStart=performance.now();
+  startWarningSound();
+  log("경계장치 경고");
+ }
+ if(warningStart!==null&&performance.now()-warningStart>15000&&!emergency){
+  applyEmergency();
+  log("경계장치 응답 없음 · 비상제동");
+ }
+
+ passStations();render();updateTimetable();updateOtherTable();updateTrack();
+ requestAnimationFrame(tick);
+}
+
+function pedalPress(){
+ initAudio();
+ vigilanceLast=performance.now();
+ warningStart=null;
+ stopWarningSound();
+ $("pedalTime").textContent="최근 입력: "+deviceTimeText();
+}
+function toggleOvertake(){initAudio();overtakeMode=!overtakeMode;log("추월 모드 "+(overtakeMode?"ON · 앞앞차 기준":"OFF"));render();updateTrack()}
+
+function notchUp(){
+ initAudio();
+ if(power < 0){
+  setNotch(power === -1 ? "N" : "B" + (Math.abs(power) - 1));
+ } else if(power === 0){
+  setNotch("P1");
+ } else {
+  setNotch("P" + Math.min(5, power + 1));
+ }
+}
+
+function notchDown(){
+ initAudio();
+ if(power > 0){
+  setNotch(power === 1 ? "N" : "P" + (power - 1));
+ } else if(power === 0){
+  setNotch("B1");
+ } else {
+  setNotch("B" + Math.min(5, Math.abs(power) + 1));
+ }
+}
+
+$("setTrainNoBtn").addEventListener("click", applyTrainNo);
+$("trainNoInput").addEventListener("keydown", e=>{
+ if(e.key === "Enter"){
+  e.preventDefault();
+  applyTrainNo();
+ }
+});
+
+$("routeSelect").addEventListener("change", (e)=>{
+ initAudio();
+ changeRoute(e.target.value);
+});
+
+$("saveGame").addEventListener("click", saveGameData);
+$("loadGame").addEventListener("click", loadGameData);
+
+$("forward").addEventListener("click",()=>setDirection(1));
+$("reverse").addEventListener("click",()=>setDirection(-1));
+$("vcbButton").addEventListener("click",toggleVCB);
+$("pantButton").addEventListener("click",togglePantograph);
+$("coast").addEventListener("click",()=>setNotch("N"));
+$("eb").addEventListener("click",applyEmergency);$("release").addEventListener("click",releaseBrake);
+$("turnL").addEventListener("click",()=>setTurnout("좌측"));
+$("turnS").addEventListener("click",()=>setTurnout("직진"));
+$("turnR").addEventListener("click",()=>setTurnout("우측"));
+$("permitL").addEventListener("click",()=>togglePermission("L"));
+$("permitR").addEventListener("click",()=>togglePermission("R"));
+$("leftDoor").addEventListener("click",()=>toggleDoor("L"));
+$("rightDoor").addEventListener("click",()=>toggleDoor("R"));
+$("pedal").addEventListener("click",pedalPress);
+$("overtake").addEventListener("click",toggleOvertake);
+$("setGap").addEventListener("click",()=>{
+ initAudio();
+ const v=Number($("gapInput").value);
+ if(Number.isFinite(v)&&v>=.5&&v<=20){targetGap=v;log("목표 간격 "+v.toFixed(1)+" km");render()}
+ else alert("목표 간격은 0.5~20km로 입력하세요.");
+});
+$("baseTrain").addEventListener("change",()=>{render();updateTrack()});
+document.querySelectorAll("[data-notch]").forEach(b=>b.addEventListener("click",()=>setNotch(b.dataset.notch)));
+document.addEventListener("keydown",e=>{
+ initAudio();
+ if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName))return;
+ if(e.code==="Space"){e.preventDefault();if(!heldKeys.has("Space"))pedalPress();heldKeys.add("Space");return}
+ if(e.code==="ArrowUp"||e.code==="ArrowDown"){e.preventDefault(); e.stopPropagation();}
+ if(heldKeys.has(e.code))return;heldKeys.add(e.code);
+ const k=e.key.toLowerCase();
+ if(k==="f")setDirection(1);else if(k==="r")setDirection(-1);
+ else if(k==="o")toggleVCB();else if(k==="p")togglePantograph();
+ else if(k==="c")setNotch("N");else if(k==="t")toggleOvertake();
+ else if(k==="w")toggleDoor("L");else if(k==="e")toggleDoor("R");
+ else if(k==="a")togglePermission("L");else if(k==="d")togglePermission("R");
+ else if(k==="4")setTurnout("좌측");else if(k==="5")setTurnout("직진");else if(k==="6")setTurnout("우측");
+ else if(e.key==="ArrowUp"){ notchUp(); }
+ else if(e.key==="ArrowDown"){ notchDown(); }
+});
+document.addEventListener("keyup",e=>heldKeys.delete(e.code));
+window.addEventListener("blur",()=>heldKeys.clear());
+
+changeRoute("gyeongbu");
+log("시뮬레이터 시작 · 열차 편명 변경 기능 및 사운드 보완 완료");
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
