@@ -134,7 +134,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <button data-notch="P1">P1</button><button data-notch="P2">P2</button><button data-notch="P3">P3</button><button data-notch="P4">P4</button><button data-notch="P5">P5</button><button data-notch="N">N</button>
 <button data-notch="B1">B1</button><button data-notch="B2">B2</button><button data-notch="B3">B3</button><button data-notch="B4">B4</button><button data-notch="B5">B5</button>
 </div>
-<p class="muted" id="controlKeyGuide">P5: +1.8 km/h/s · B5: −1.8 km/h/s · Space: 경계 페달 · T: 추월 모드</p>
+<p class="muted" id="controlKeyGuide">P5: +1.8 km/h/s · B5: −1.8 km/h/s · O: 프로판 · P: 환원기 · I: 디젤 · Space: 경계</p>
 </section>
 
 <section class="panel s4">
@@ -205,10 +205,9 @@ let userTrainNo = "001";
 let userTrainId = "ERR 001";
 let maxLimitSpeed = 330;
 
-// 동력 / 시스템 변수
 let speed=0,distance=0,direction=0,power=0;
 let vcb=false, pantograph=false, dieselEngine=false;
-let propaneSecLeft = 72000; // 20시간 (72,000초)
+let propaneSecLeft = 72000;
 
 let emergency=false,leftDoor=false,rightDoor=false,allowL=false,allowR=false;
 let turnout="직진",stationIndex=0,arrived=false;
@@ -448,13 +447,12 @@ function saveGameData(){
  };
  localStorage.setItem("err_save_data", JSON.stringify(data));
  log("게임이 성공적으로 저장되었습니다.");
- alert("게임 상태가 저장되었습니다!");
 }
 
 function loadGameData(){
  const saved = localStorage.getItem("err_save_data");
  if(!saved){
-  alert("저장된 게임 데이터가 없습니다.");
+  log("저장된 게임 데이터가 없습니다.");
   return;
  }
  try {
@@ -501,9 +499,8 @@ function loadGameData(){
   updateTrack();
   render();
   log("저장된 게임을 불러왔습니다.");
-  alert("게임을 성공적으로 불러왔습니다!");
  } catch(e){
-  alert("저장된 데이터를 불러오는 중 오류가 발생했습니다.");
+  log("저장된 데이터를 불러오는 중 오류가 발생했습니다.");
  }
 }
 
@@ -847,7 +844,6 @@ function updateOtherTable(){
    st.active?((st.km-distance>=0?"+":"")+(st.km-distance).toFixed(1)+" km"):"-"];
   vals.forEach(v=>{const td=document.createElement("td");td.textContent=v;row.appendChild(td)});
   body.appendChild(row);
- chip;
  }
 }
 
@@ -1074,7 +1070,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · O(프로판엔진), P(환원기), I(디젤엔진) 구동 제어 반영 완료");
+log("시뮬레이터 시작 · 저장 및 불러오기 팝업 제거 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
