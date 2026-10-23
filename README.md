@@ -74,7 +74,15 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </header>
 <main>
 <section class="panel s8">
-<div class="row between"><h2>운전실 · ERR 001</h2><span id="clock" class="badge">--:--:--</span></div>
+<div class="row between">
+<h2 id="cabTitle">운전실 · ERR 001</h2>
+<div class="row" style="margin:0;">
+<label for="trainNoInput" style="margin:0;font-weight:bold;">편명: ERR</label>
+<input id="trainNoInput" type="text" maxlength="3" value="001" style="width:55px;text-align:center;font-weight:bold;padding:4px 6px;">
+<button id="setTrainNoBtn" style="padding:4px 8px;">설정</button>
+<span id="clock" class="badge">--:--:--</span>
+</div>
+</div>
 <div class="g2">
 <div class="stat"><small>현재 속도</small><span id="speed" class="big">0</span> km/h<div class="progress"><span id="speedbar"></span></div></div>
 <div class="stat"><small>현재 위치</small><strong id="station">서울</strong><div id="distance" class="muted">0.0 km</div>다음 역: <strong id="next">광명</strong></div>
@@ -146,7 +154,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </section>
 
 <section class="panel s6">
-<h2>시간표 · ERR 001</h2>
+<h2 id="timetableTitle">시간표 · ERR 001</h2>
 <p class="muted">시계는 기기 시각, 색상은 역별 운행 진행 상태를 표시합니다.</p>
 <div class="scroll"><table><thead><tr><th>역</th><th>도착</th><th>출발</th><th>거리</th><th>상태</th></tr></thead><tbody id="timetable"></tbody></table></div>
 </section>
@@ -164,12 +172,18 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 const $=id=>document.getElementById(id);
 const DAY=86400;
 
+let trainNo = "001";
 let audioCtx = null;
+let warningToggle = false;
+
 function initAudio() {
  if (!audioCtx) {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (AudioContextClass) {
+   audioCtx = new AudioContextClass();
+  }
  }
- if (audioCtx.state === 'suspended') {
+ if (audioCtx && audioCtx.state === 'suspended') {
   audioCtx.resume();
  }
 }
@@ -295,8 +309,24 @@ let overtakeMode=false,targetGap=2,targetSpeed=330,notchLabel="N";
 const trains=[],heldKeys=new Set();
 let warningSoundInterval = null;
 
+function applyTrainNo(){
+ const val = $("trainNoInput").value.replace(/[^0-9]/g, '');
+ if(val.length > 0){
+  trainNo = String(val).padStart(3, '0').slice(-3);
+ } else {
+  trainNo = "001";
+ }
+ $("trainNoInput").value = trainNo;
+ $("cabTitle").textContent = "운전실 · ERR " + trainNo;
+ $("timetableTitle").textContent = "시간표 · ERR " + trainNo;
+ log("열차 편명이 ERR " + trainNo + "(으)로 변경되었습니다.");
+ render();
+ updateTrack();
+}
+
 function saveGameData(){
  const data = {
+  trainNo,
   currentRouteKey,
   speed,
   distance,
@@ -329,6 +359,11 @@ function loadGameData(){
  }
  try {
   const data = JSON.parse(saved);
+  trainNo = data.trainNo || "001";
+  $("trainNoInput").value = trainNo;
+  $("cabTitle").textContent = "운전실 · ERR " + trainNo;
+  $("timetableTitle").textContent = "시간표 · ERR " + trainNo;
+
   currentRouteKey = data.currentRouteKey;
   activeRoute = routes[currentRouteKey];
   LEN = activeRoute.len;
@@ -394,32 +429,35 @@ function changeRoute(key){
  log(activeRoute.name + " 노선으로 변경되었습니다. (속력·위치·상태 유지)");
 }
 
-function playWarningSound() {
+function playWarningBeep() {
  initAudio();
+ if (!audioCtx) return;
  try {
-  if (!audioCtx) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+  osc.type = 'sawtooth';
+  const freq = warningToggle ? 880 : 660;
+  warningToggle = !warningToggle;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
   gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start();
-  osc.stop(audioCtx.currentTime + 0.4);
+  osc.stop(audioCtx.currentTime + 0.35);
  } catch(e) {}
 }
 
 function startWarningSound() {
  if (warningSoundInterval) return;
- playWarningSound();
+ playWarningBeep();
  warningSoundInterval = setInterval(() => {
   if (warningStart !== null && !emergency) {
-   playWarningSound();
+   playWarningBeep();
   } else {
    stopWarningSound();
   }
- }, 1000);
+ }, 450);
 }
 
 function stopWarningSound() {
@@ -666,7 +704,7 @@ function updateTrack(){
  activeRoute.majorMarks.forEach(p=>{
   const l=document.createElement("div");l.className="tracklabel";l.style.left=p.k/LEN*100+"%";l.textContent=p.n;box.appendChild(l);
  });
- const u=document.createElement("div");u.className="mark user";u.style.left=Math.max(0,Math.min(100,distance/LEN*100))+"%";u.title="ERR 001";box.appendChild(u);
+ const u=document.createElement("div");u.className="mark user";u.style.left=Math.max(0,Math.min(100,distance/LEN*100))+"%";u.title="ERR "+trainNo;box.appendChild(u);
  trains.filter(t=>t.km >= 0 && t.km <= LEN).forEach(t=>{
   const m=document.createElement("div");m.className="mark";m.style.left=t.km/LEN*100+"%";m.title=t.id;box.appendChild(m);
  });
@@ -703,145 +741,4 @@ function render(){
 
 function passStations(){
  while(stationIndex<stations.length&&distance>=stations[stationIndex].km){
-  if(stationIndex===0){stationIndex++;continue}
-  const s=stations[stationIndex];
-  if(stationIndex===stations.length-1){
-   if(distance>=LEN){distance=LEN;speed=0;power=0;notchLabel="N";arrived=true;log(activeRoute.endName+" 도착")}
-   break;
-  }
-  if(overtakeMode){stationIndex++;continue}
-  if(distance>s.km+.2){stationIndex++;continue}
-  break;
- }
-}
-
-function tick(now){
- const dt=Math.min((now-lastFrame)/1000,.1);lastFrame=now;
- syncClock();updateOtherTrains();
- const limit=330;targetSpeed=calculateTargetSpeed();
- let acceleration=0;
- if(emergency)acceleration=-5;
- else if(power>0){
-  if(vcb&&pantograph&&direction!==0)acceleration=power*0.36; 
-  else{power=0;notchLabel="N"}
- }else if(power<0)acceleration=power*0.36;
-
- if(overtakeMode&&!emergency){
-  const info=getAheadAhead();
-  if(info.front&&info.gap!==null){
-   const g=info.gap;
-   if(g<=.2)acceleration=Math.min(acceleration,-1.8);
-   else if(g<targetGap*.5)acceleration=Math.min(acceleration,-1.4);
-   else if(g<targetGap*.75)acceleration=Math.min(acceleration,-.9);
-   else if(g<targetGap)acceleration=Math.min(acceleration,-.36);
-  }
-  if(speed>targetSpeed+1)acceleration=Math.min(acceleration,-1.8);
- }
- speed=Math.max(0,Math.min(330,speed+acceleration*dt));
- if(speed>limit){speed=Math.max(limit,speed-1.8*dt);if(speed>limit+5&&!emergency)applyEmergency()}
- if(speed>.05&&direction!==0&&!arrived){distance+=direction*speed/3600*dt;distance=Math.max(0,Math.min(LEN,distance))}
- if(distance>=LEN&&direction===1&&!arrived){distance=LEN;speed=0;power=0;notchLabel="N";arrived=true;log(activeRoute.endName+" 도착")}
- if(distance<=0&&direction===-1){distance=0;speed=0}
-
- const since=performance.now()-vigilanceLast;
- if(since>55000&&warningStart===null){
-  warningStart=performance.now();
-  startWarningSound();
-  log("경계장치 경고");
- }
- if(warningStart!==null&&performance.now()-warningStart>15000&&!emergency){
-  applyEmergency();
-  log("경계장치 응답 없음 · 비상제동");
- }
-
- passStations();render();updateTimetable();updateOtherTable();updateTrack();
- requestAnimationFrame(tick);
-}
-
-function pedalPress(){
- initAudio();
- vigilanceLast=performance.now();
- warningStart=null;
- stopWarningSound();
- $("pedalTime").textContent="최근 입력: "+deviceTimeText();
-}
-function toggleOvertake(){initAudio();overtakeMode=!overtakeMode;log("추월 모드 "+(overtakeMode?"ON · 앞앞차 기준":"OFF"));render();updateTrack()}
-
-function notchUp(){
- initAudio();
- if(power < 0){
-  setNotch(power === -1 ? "N" : "B" + (Math.abs(power) - 1));
- } else if(power === 0){
-  setNotch("P1");
- } else {
-  setNotch("P" + Math.min(5, power + 1));
- }
-}
-
-function notchDown(){
- initAudio();
- if(power > 0){
-  setNotch(power === 1 ? "N" : "P" + (power - 1));
- } else if(power === 0){
-  setNotch("B1");
- } else {
-  setNotch("B" + Math.min(5, Math.abs(power) + 1));
- }
-}
-
-$("routeSelect").addEventListener("change", (e)=>{
- initAudio();
- changeRoute(e.target.value);
-});
-
-$("saveGame").addEventListener("click", saveGameData);
-$("loadGame").addEventListener("click", loadGameData);
-
-$("forward").addEventListener("click",()=>setDirection(1));
-$("reverse").addEventListener("click",()=>setDirection(-1));
-$("vcbButton").addEventListener("click",toggleVCB);
-$("pantButton").addEventListener("click",togglePantograph);
-$("coast").addEventListener("click",()=>setNotch("N"));
-$("eb").addEventListener("click",applyEmergency);$("release").addEventListener("click",releaseBrake);
-$("turnL").addEventListener("click",()=>setTurnout("좌측"));
-$("turnS").addEventListener("click",()=>setTurnout("직진"));
-$("turnR").addEventListener("click",()=>setTurnout("우측"));
-$("permitL").addEventListener("click",()=>togglePermission("L"));
-$("permitR").addEventListener("click",()=>togglePermission("R"));
-$("leftDoor").addEventListener("click",()=>toggleDoor("L"));
-$("rightDoor").addEventListener("click",()=>toggleDoor("R"));
-$("pedal").addEventListener("click",pedalPress);
-$("overtake").addEventListener("click",toggleOvertake);
-$("setGap").addEventListener("click",()=>{
- initAudio();
- const v=Number($("gapInput").value);
- if(Number.isFinite(v)&&v>=.5&&v<=20){targetGap=v;log("목표 간격 "+v.toFixed(1)+" km");render()}
- else alert("목표 간격은 0.5~20km로 입력하세요.");
-});
-$("baseTrain").addEventListener("change",()=>{render();updateTrack()});
-document.querySelectorAll("[data-notch]").forEach(b=>b.addEventListener("click",()=>setNotch(b.dataset.notch)));
-document.addEventListener("keydown",e=>{
- initAudio();
- if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement.tagName))return;
- if(e.code==="Space"){e.preventDefault();if(!heldKeys.has("Space"))pedalPress();heldKeys.add("Space");return}
- if(e.code==="ArrowUp"||e.code==="ArrowDown"){e.preventDefault();}
- if(heldKeys.has(e.code))return;heldKeys.add(e.code);
- const k=e.key.toLowerCase();
- if(k==="f")setDirection(1);else if(k==="r")setDirection(-1);
- else if(k==="o")toggleVCB();else if(k==="p")togglePantograph();
- else if(k==="c")setNotch("N");else if(k==="t")toggleOvertake();
- else if(k==="w")toggleDoor("L");else if(k==="e")toggleDoor("R");
- else if(k==="a")togglePermission("L");else if(k==="d")togglePermission("R");
- else if(k==="4")setTurnout("좌측");else if(k==="5")setTurnout("직진");else if(k==="6")setTurnout("우측");
- else if(e.key==="ArrowUp") notchUp();
- else if(e.key==="ArrowDown") notchDown();
-});
-document.addEventListener("keyup",e=>heldKeys.delete(e.code));
-window.addEventListener("blur",()=>heldKeys.clear());
-
-changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 저장 및 불러오기 기능 추가 완료");
-requestAnimationFrame(tick);
-</script>
-</body>
-</html>
+  if(
