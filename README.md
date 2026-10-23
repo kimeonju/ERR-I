@@ -25,7 +25,7 @@ h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:13px 0 7px}
 button,input,select{background:#0b1420;color:var(--text);border:1px solid #41566d;border-radius:7px;padding:9px;font:inherit}
 button{cursor:pointer}button:hover{border-color:var(--blue)}button.active{background:#174b3a;border-color:var(--green)}
 button.danger{border-color:#943947}button.warn{border-color:#8a5d25}
-input[type=number]{width:100%;min-width:60px}select{max-width:100%}
+input[type=number],input[type=text]{width:100%;min-width:60px}select{max-width:100%}
 label{display:block;color:var(--muted);margin:7px 0 4px}
 .progress{height:12px;background:#08101a;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
 .progress span{display:block;height:100%;background:var(--green);width:0%}
@@ -58,6 +58,10 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 <p id="headerSub">노선 선택 및 기기 시각 연동 시뮬레이터</p>
 </div>
 <div class="row">
+<div class="route-selector">
+<label for="trainIdInput" style="margin:0;font-weight:bold;">편성번호:</label>
+<input id="trainIdInput" type="text" value="ERR 001" style="width:110px;">
+</div>
 <button id="saveGame" class="active">💾 게임 저장</button>
 <button id="loadGame">📂 저장 불러오기</button>
 <div class="route-selector" style="margin-left:10px;">
@@ -74,7 +78,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </header>
 <main>
 <section class="panel s8">
-<div class="row between"><h2>운전실 · ERR 001</h2><span id="clock" class="badge">--:--:--</span></div>
+<div class="row between"><h2 id="cabinTitle">운전실 · ERR 001</h2><span id="clock" class="badge">--:--:--</span></div>
 <div class="g2">
 <div class="stat"><small>현재 속도</small><span id="speed" class="big">0</span> km/h<div class="progress"><span id="speedbar"></span></div></div>
 <div class="stat"><small>현재 위치</small><strong id="station">서울</strong><div id="distance" class="muted">0.0 km</div>다음 역: <strong id="next">광명</strong></div>
@@ -146,7 +150,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 </section>
 
 <section class="panel s6">
-<h2>시간표 · ERR 001</h2>
+<h2 id="timetableTitle">시간표 · ERR 001</h2>
 <p class="muted">시계는 기기 시각, 색상은 역별 운행 진행 상태를 표시합니다.</p>
 <div class="scroll"><table><thead><tr><th>역</th><th>도착</th><th>출발</th><th>거리</th><th>상태</th></tr></thead><tbody id="timetable"></tbody></table></div>
 </section>
@@ -163,6 +167,8 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 "use strict";
 const $=id=>document.getElementById(id);
 const DAY=86400;
+
+let userTrainId = "ERR 001";
 
 let audioCtx = null;
 function initAudio() {
@@ -295,8 +301,16 @@ let overtakeMode=false,targetGap=2,targetSpeed=330,notchLabel="N";
 const trains=[],heldKeys=new Set();
 let warningSoundInterval = null;
 
+function updateTrainTitles(){
+ userTrainId = $("trainIdInput").value.trim() || "ERR 001";
+ $("cabinTitle").textContent = "운전실 · " + userTrainId;
+ $("timetableTitle").textContent = "시간표 · " + userTrainId;
+}
+
 function saveGameData(){
+ updateTrainTitles();
  const data = {
+  userTrainId,
   currentRouteKey,
   speed,
   distance,
@@ -329,6 +343,9 @@ function loadGameData(){
  }
  try {
   const data = JSON.parse(saved);
+  userTrainId = data.userTrainId || "ERR 001";
+  $("trainIdInput").value = userTrainId;
+  
   currentRouteKey = data.currentRouteKey;
   activeRoute = routes[currentRouteKey];
   LEN = activeRoute.len;
@@ -357,6 +374,7 @@ function loadGameData(){
   document.querySelector("#trackTerminals").innerHTML = `<span class="muted">${activeRoute.startName} 0 km</span><span class="muted">${activeRoute.endName} ${LEN} km</span>`;
   $("gapInput").value = targetGap;
   
+  updateTrainTitles();
   initTrains();
   updateTimetable();
   updateOtherTable();
@@ -666,7 +684,7 @@ function updateTrack(){
  activeRoute.majorMarks.forEach(p=>{
   const l=document.createElement("div");l.className="tracklabel";l.style.left=p.k/LEN*100+"%";l.textContent=p.n;box.appendChild(l);
  });
- const u=document.createElement("div");u.className="mark user";u.style.left=Math.max(0,Math.min(100,distance/LEN*100))+"%";u.title="ERR 001";box.appendChild(u);
+ const u=document.createElement("div");u.className="mark user";u.style.left=Math.max(0,Math.min(100,distance/LEN*100))+"%";u.title=userTrainId;box.appendChild(u);
  trains.filter(t=>t.km >= 0 && t.km <= LEN).forEach(t=>{
   const m=document.createElement("div");m.className="mark";m.style.left=t.km/LEN*100+"%";m.title=t.id;box.appendChild(m);
  });
@@ -677,6 +695,7 @@ function updateTrack(){
 }
 
 function render(){
+ updateTrainTitles();
  $("speed").textContent=Math.round(speed);$("speedbar").style.width=Math.min(100,speed/330*100)+"%";
  $("distance").textContent=distance.toFixed(1)+" km";$("station").textContent=currentStationName();
  const ni=nextStationIndex();$("next").textContent=ni<0?"종착역":stations[ni].name;
@@ -794,6 +813,11 @@ $("routeSelect").addEventListener("change", (e)=>{
  changeRoute(e.target.value);
 });
 
+$("trainIdInput").addEventListener("input", ()=>{
+ updateTrainTitles();
+ updateTrack();
+});
+
 $("saveGame").addEventListener("click", saveGameData);
 $("loadGame").addEventListener("click", loadGameData);
 
@@ -840,7 +864,7 @@ document.addEventListener("keyup",e=>heldKeys.delete(e.code));
 window.addEventListener("blur",()=>heldKeys.clear());
 
 changeRoute("gyeongbu");
-log("시뮬레이터 시작 · 키보드 상하방향키 스크롤 방지 적용 완료");
+log("시뮬레이터 시작 · 편성번호 변경 기능 적용 완료");
 requestAnimationFrame(tick);
 </script>
 </body>
